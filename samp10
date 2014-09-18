@@ -1,0 +1,153 @@
+public String GenerateCPASummaryTblHTML(List<AuditFindingsSummaryTO> lstFindings)
+        {
+            String sFinalHTML = String.Empty;
+            int iFA_CPA_ID = AudConstants.AUD_FILE_LEVEL_FA;
+            int iODAG_CPA_ID = AudConstants.AUD_FILE_LEVEL_ODAG;
+            int iCDAG_CPA_ID = AudConstants.AUD_FILE_LEVEL_CDAG;
+            int iCPE_CPA_ID = AudConstants.AUD_FILE_LEVEL_COMPLIANCE;
+            int iSNP_CPA_ID = AudConstants.AUD_FILE_LEVEL_SNP;
+
+            //CPE Table
+            if (lstFindings.FirstOrDefault().Cpa_Id.Equals(iCPE_CPA_ID))
+            {
+                sFinalHTML = String.Format(@"<table border='1' class='ReportTableHTML' width='100%' summary='The table below displays audit elements, number of CAR conditions and number of observations.'>
+                                <caption>Table {0}: Results of Compliance Program Effectiveness</caption>
+                                <tr style='text-align:center'>
+                                    <th><b>Audit Elements</b></th>
+                                    <th><b>Number of CAR Conditions</b></th>
+                                    <th><b>Number of Observations</b></th>
+                                </tr>
+                                {1} 
+                            </table>{2}", iSectionCnt, GenerateCPETable(lstFindings), GeneratePAFootNotes(lstFindings));
+
+            }
+            //ODAG Table
+            else if (lstFindings.FirstOrDefault().Cpa_Id.Equals(iODAG_CPA_ID))
+            {
+                sFinalHTML = String.Format(@"<table border='1' class='ReportTableHTML' width='100%' summary='The table below displays audit elements, Cases Reviewed, Cases Failed, number of CAR conditions, Number of ICAR Conditions and number of Observations.'>
+                                <caption>Table {0}: Results of the sample reviews for Effectuation Timeliness, Appropriateness of Clinical Decision-Making, Part C Grievances and Dismissals </caption>
+                                <tr style='text-align:center'>
+                                    <th><b>Audit Elements</b></th>
+                                    <th><b>Cases Reviewed</b></th>
+                                    <th><b>Cases Failed</b></th>
+                                    <th><b>Number of CAR Conditions</b></th>
+                                    <th><b>Number of ICAR Conditions</b></th>
+                                    <th><b>Number of Observations</b></th>
+                                </tr>
+                                {1}
+                            </table> {2}", iSectionCnt, GenerateODAGTable(lstFindings), GeneratePAFootNotes(lstFindings));
+            }
+            //CDAG Table
+            else if (lstFindings.FirstOrDefault().Cpa_Id.Equals(iCDAG_CPA_ID))
+            {
+                sFinalHTML = String.Format(@"<table border='1' class='ReportTableHTML' width='100%' summary='The table below displays audit elements, Cases Reviewed, Cases Failed, number of CAR conditions, Number of ICAR Conditions and number of Observations.'>
+                                <caption>Table {0}: Results of the sample reviews for Effectuation Timeliness, Appropriateness of Clinical Decision-Making and Part D Grievances </caption>
+                                <tr style='text-align:center'>
+                                    <th><b>Audit Elements</b></th>
+                                    <th><b>Cases Reviewed</b></th>
+                                    <th><b>Cases Failed</b></th>
+                                    <th><b>Number of CAR Conditions</b></th>
+                                    <th><b>Number of ICAR Conditions</b></th>
+                                    <th><b>Number of Observations</b></th>
+                                </tr>
+                                {1}
+                            </table> {2}", iSectionCnt, GenerateCDAGTable(lstFindings), GeneratePAFootNotes(lstFindings));
+            }
+            //SNP Table
+            else if (lstFindings.FirstOrDefault().Cpa_Id.Equals(iSNP_CPA_ID))
+            {
+                sFinalHTML = String.Format(@"<table border='1' class='ReportTableHTML' width='100%' summary='The table below displays audit elements, Cases Reviewed, Cases Failed, number of CAR conditions and number of Observations.'>
+                                <caption>Table {0}: Results of the Sample Reviews for Population to be Served – Enrollment Verification; Health Risk Assessment (HRA), Interdisciplinary Care Team (ICT), Implementation of the Individualized Care Plan (ICP) and Use of Evidence-Based Clinical Guidelines; and Plan Performance Monitoring and Evaluation of the MOC</caption>
+                                <tr style='text-align:center'>
+                                    <th><b>Audit Elements</b></th>
+                                    <th><b>Cases Reviewed</b></th>
+                                    <th><b>Cases Failed</b></th>
+                                    <th><b>Number of CAR Conditions</b></th>
+                                    <th><b>Number of Observations</b></th>
+                                </tr>
+                                {1}
+                            </table> {2}", iSectionCnt, GenerateSNPTable(lstFindings), GeneratePAFootNotes(lstFindings));
+            }
+            //FA Table
+            else if (lstFindings.FirstOrDefault().Cpa_Id.Equals(iFA_CPA_ID))
+            {
+                sFinalHTML = String.Format(@"<table border='1' class='ReportTableHTML' width='100%' summary='The table below displays audit elements, Class of Medication, Cases Reviewed, Cases Failed, number of CAR conditions, Number of ICAR Conditions and number of Observations.'>
+                                <caption>Table {0}: Results of the sample reviews of Part D Formulary Administration, Transition, Website Review, and Pharmacy & Therapeutics (P&T) Committee</caption>
+                                <tr style='text-align:center'>
+                                    <th><b>Audit Elements</b></th>
+                                    <th><b>Class of Medication</b></th>
+                                    <th><b>Cases Reviewed</b></th>
+                                    <th><b>Cases Failed</b></th>
+                                    <th><b>Number of CAR Conditions</b></th>
+                                    <th><b>Number of ICAR Conditions</b></th>
+                                    <th><b>Number of Observations</b></th>
+                                </tr>
+                                {1}
+                            </table> {2}", iSectionCnt, GenerateFATable(lstFindings), GeneratePAFootNotes(lstFindings));
+            }
+
+            return sFinalHTML;
+        }
+ private ValidationResults ValidateAuditGuideUpload(AuditFileUploadTO UploadTO)
+        {
+            IServiceBuffer svcBuf = new ServiceBufferImpl();
+            ExcelReadHelper excelReadHelper = new ExcelReadHelper(_manager);
+            ValidationResults results = new ValidationResults();
+            List<ProgramAreaTO> lstProgAreas;
+            ProgramAreaTO objProgArea = new ProgramAreaTO();
+
+            if (results.Count == 0)
+            {
+                // create temp copy of uploaded file
+                AuditFileUploadTO tempFile = new AuditFileUploadTO(UploadTO);
+                tempFile.FileInfo.FileName = tempFile.UploadUser.UserID + "_" + tempFile.FileInfo.FileName;
+                tempFile.FileInfo.FilePath = Path.Combine(tempFile.FileInfo.DirectoryPath, "temp\\" + tempFile.FileInfo.FileName);
+                tempFile.CurrentAudit = UploadTO.CurrentAudit;
+
+                // create temp directory and save the file
+                Directory.CreateDirectory(tempFile.FileInfo.DirectoryPath);
+                tempFile.RawFileData.SaveAs(tempFile.FileInfo.FilePath);
+
+                // read data from HPMS tab of the saved file
+                AuditGuideHpmsTO HPMS_Data = (excelReadHelper.ReadExcelSheetHpms(tempFile)).FirstOrDefault();
+
+                // check that HPMS Tab was present in the uploaded file.
+                if (HPMS_Data != null)
+                {
+                    lstProgAreas = (List<ProgramAreaTO>)_manager.GetProgramAreas().GetServiceInvocationFocusObject();
+                    objProgArea = lstProgAreas.FirstOrDefault(pa => pa.Id.Equals(HPMS_Data.Cpa_Id));
+
+                    // check value of HPMS Tab Error Count (isValid) column
+                    if (HPMS_Data.Validation_Error_Count != 0)
+                        results.AddResult(new ValidationResult(String.Format(_rm.GetString("AuditGuideValidationError"), HPMS_Data.Validation_Error_Count), this, null, null, null));
+                    
+                    // check value of HPMS Tab Template Version column
+                    svcBuf.SetServiceInvocationFocusObject(HPMS_Data.Cpa_Id);
+                    if (!HPMS_Data.Template_Version.Equals(objProgArea.AuditGuideVersion))
+                        results.AddResult(new ValidationResult(String.Format(_rm.GetString("AuditGuideVersionMismatch"), HPMS_Data.Template_Version), this, null, null, null));
+
+                    // check value of HPMS Tab Program Area column
+                    if (HPMS_Data.Cpa_Id != UploadTO.FileLevel)
+                        results.AddResult(new ValidationResult(String.Format(_rm.GetString("AuditGuideProgramAreaMismatch"), HPMS_Data.Cpa_Id), this, null, null, null));
+                }
+                else
+                {
+                    // HPMS Tab does not exist as file was Tampered.
+                    results.AddResult(new ValidationResult(String.Format(_rm.GetString("AuditGuideTamperError"), UploadTO.FileLevel), this, null, null, null));
+                }
+
+                //If there are no errors so far, validate Report and Summary worksheet from the Excel upload and Import them.
+                if (results.Count == 0)
+                {
+                    results.AddAllResults(excelReadHelper.ValidateAndProcessExcel(tempFile));
+                }
+                
+                // delete temp file and remove temp directory if the directory is empty
+                File.Delete(tempFile.FileInfo.FilePath);
+                if (Directory.GetFiles(tempFile.FileInfo.DirectoryPath).Length == 0)
+                    Directory.Delete(tempFile.FileInfo.DirectoryPath);
+            }
+
+            return results;
+        }
+
