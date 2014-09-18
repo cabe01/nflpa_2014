@@ -1,0 +1,207 @@
+public class AudServiceImpl : ApplicationServiceBaseImpl, IAudService
+    {
+        private static readonly ILog log = LogManager.GetLogger(typeof(AudServiceImpl));
+        private IAUDManager _audManager;
+        private IAUDLetterGenerationManager _letManager;
+        private IAUDDocumentGenerationManager _docManager;
+            
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="securitydomainService"></param>
+        public AudServiceImpl(IAudDomainService audDomainService, IObjectValidator validator)
+            : base(audDomainService, validator)
+            {
+                this._audManager = new AUDManagerImpl((IAudDomainService)this.DomainService, this.ObjectValidator);
+                this._letManager = new LetterGenerationManagerImpl((IAudDomainService)this.DomainService, this.ObjectValidator);
+                this._docManager = new AUDDocumentGenerationManager((IAudDomainService)this.DomainService, this.ObjectValidator);
+            }
+
+        public IServiceBuffer GetContractNameAndNumber(IServiceBuffer svcBuf)
+        {
+            return this._audManager.GetContractNameAndNumber(svcBuf);
+        }
+        public IServiceBuffer GetAllLookUpValue()
+        {
+            return this._audManager.GetAllLookUpValue();
+        }
+        public IServiceBuffer GetAuditReasons()
+        {
+            return this._audManager.GetAuditReasons();
+        }
+        public IServiceBuffer GetAllVersionedLookUpValue()
+        {
+            return this._audManager.GetAllVersionedLookUpValue();
+        }
+        public IServiceBuffer CreateAudit(IServiceBuffer svcBuf)
+        {
+            AuditCreateTO newAudit = (AuditCreateTO)svcBuf.GetServiceInvocationFocusObject();
+            IServiceBuffer svcData = new ServiceBufferImpl();
+
+            // Set the history action
+            newAudit.HistoryInfo = GenerateAuditHistoryTO(newAudit.Id, AudConstants.AUD_HIST_ACTION_CREATED_AUDIT, newAudit.UserId);
+
+            try
+            {
+                // Verify the existance of the Audit ID entered in the Related Audit ID field on the schedule page
+                if (!String.IsNullOrEmpty(newAudit.RelatedAuditId))
+                {
+                    svcData.SetServiceInvocationFocusObject(int.Parse(newAudit.RelatedAuditId));
+                    AuditTO relatedAudit = (AuditTO)((IServiceBuffer)GetAudit(svcData)).GetServiceInvocationFocusObject();
+                    if (relatedAudit.StatusId == AudConstants.AUD_STATUS_DELETED)
+                        throw new AuditDeletedException();
+                }
+
+                // Create the audit
+                svcData = this._audManager.CreateAudit(svcBuf);
+
+                newAudit = (AuditCreateTO)svcBuf.GetServiceInvocationFocusObject();
+
+                // Call Workflow
+                newAudit.StatusId = HandleWorkflow(newAudit.HistoryInfo, newAudit.Id, ValidTriggers.Trigger.Created);
+
+                svcBuf.SetServiceInvocationFocusObject(newAudit);
+            }
+            catch (Exception ex)
+            {
+                if (ex is EditPerformedException)
+                { svcBuf.ServiceException = new EditPerformedException(newAudit.ResourceMan.GetString("EditPerformedException")); }
+                else if (ex is AuditNotFoundException)
+                { svcBuf.ServiceException = new AuditNotFoundException(newAudit.ResourceMan.GetString("AuditNotFoundException")); }
+                else if (ex is AuditDeletedException)
+                { svcBuf.ServiceException = new AuditDeletedException(newAudit.ResourceMan.GetString("AuditDeletedException")); }
+                else
+                { throw; }
+            }
+
+            return svcBuf;
+        }
+        public IServiceBuffer DeleteCancelAudit(IServiceBuffer svcBuf)
+        {
+            IServiceBuffer svcData = new ServiceBufferImpl();
+            DeleteCancelTO objDeleteCancel = (DeleteCancelTO)svcBuf.GetServiceInvocationFocusObject();
+            HistoryInfoTO histTO;
+            ValidTriggers.Trigger wrkTrig;
+
+            // Setup new history transaction
+            if (AudConstants.AUD_DELETE_AUDIT_PAGE.Equals(objDeleteCancel.Action))
+            {
+                histTO = GenerateAuditHistoryTO(objDeleteCancel.AuditId, AudConstants.AUD_HIST_ACTION_DELETED, objDeleteCancel.UserId); 
+                wrkTrig = ValidTriggers.Trigger.Deleted;
+            }
+            else
+            {
+                histTO = GenerateAuditHistoryTO(objDeleteCancel.AuditId, AudConstants.AUD_HIST_ACTION_CANCELLED, objDeleteCancel.UserId);
+                wrkTrig = ValidTriggers.Trigger.Cancelled;
+            }
+
+            try
+            {
+                // Insert Delete record
+                svcData = this._audManager.DeleteCancelAudit(svcBuf);
+
+                // Update audit status
+                HandleWorkflow(histTO, objDeleteCancel.AuditId, wrkTrig);
+            }
+            catch (Exception ex)
+            {
+                if (ex is EditPerformedException)
+                {
+                    svcData.ServiceException = new EditPerformedException(objDeleteCancel.ResourceMan.GetString("EditPerformedException"));
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return svcData;
+        }
+        public IServiceBuffer ValidateSubmissionElements(IServiceBuffer serviceData)
+        {
+            return _audManager.ValidateSubmissionElements(serviceData);
+        }
+        public IServiceBuffer GetAudit(IServiceBuffer serviceData)
+        {
+            return _audManager.GetAudit(serviceData);
+        }
+        public IServiceBuffer UpdateComments(IServiceBuffer svcBuf)
+        {
+            AuditUpdateTO _audit = (AuditUpdateTO)svcBuf.GetServiceInvocationFocusObject();
+            _audit.HistoryInfo = GenerateAuditHistoryTO(_audit.Id, AudConstants.AUD_HIST_ACTION_OVERVIEW_UPDATED, _audit.UserId);
+
+            return DoAuditUpdate(_audit);
+        }
+        public IServiceBuffer UpdateAudit(IServiceBuffer svcBuf)
+        {
+            AuditUpdateTO _audit = (AuditUpdateTO)svcBuf.GetServiceInvocationFocusObject();
+            _audit.HistoryInfo = GenerateAuditHistoryTO(_audit.Id, AudConstants.AUD_HIST_ACTION_SCHEDULE_UPDATED, _audit.UserId);
+
+            return DoAuditUpdate(_audit);
+        }
+        private IServiceBuffer DoAuditUpdate(AuditUpdateTO updateAudit)
+        {
+            IServiceBuffer svcData = new ServiceBufferImpl();
+            IServiceBuffer svcBuf = new ServiceBufferImpl();
+
+            svcBuf.SetServiceInvocationFocusObject(updateAudit);
+
+            try
+            {
+                // Verify the existance of the Audit ID entered in the Related Audit ID field on the schedule page
+                if (!String.IsNullOrEmpty(updateAudit.RelatedAuditId))
+                {
+                    svcData.SetServiceInvocationFocusObject(int.Parse(updateAudit.RelatedAuditId));
+                    AuditTO relatedAudit = (AuditTO)((IServiceBuffer)GetAudit(svcData)).GetServiceInvocationFocusObject();
+                    if (relatedAudit.StatusId == AudConstants.AUD_STATUS_DELETED)
+                        throw new AuditDeletedException();
+                }
+
+                // Update the audit
+                svcBuf = this._audManager.UpdateAudit(svcBuf);
+
+                updateAudit = (AuditUpdateTO)svcBuf.GetServiceInvocationFocusObject();
+
+                UpdateCPATeams(updateAudit);
+
+                //Contracts have been added or removed
+                if (updateAudit.OriginalContractList.Count != updateAudit.ContractId.Count || !(new HashSet<string>(updateAudit.OriginalContractList).SetEquals(updateAudit.ContractId)))
+                {
+                    //If we have an engagement letter name, then we have an entry in AUDIT_X_CEO
+                    if (!String.IsNullOrEmpty(updateAudit.EngagementLetterFilename))
+                    {
+                        IServiceBuffer serviceData = new ServiceBufferImpl();
+                        EngagementLetterTO tempLetterTO = new EngagementLetterTO();
+                        serviceData.SetServiceInvocationFocusObject(updateAudit.Id);
+                        CEOUserTO CEO = (CEOUserTO)GetLetterCEOUser(serviceData).GetServiceInvocationFocusObject();
+
+                        tempLetterTO.CurrentAudit = updateAudit;
+                        tempLetterTO.CEORelatedConID = CEO.RelatedConID;
+
+                        serviceData.SetServiceInvocationFocusObject(tempLetterTO);
+                        DeleteLetterCEOUser(serviceData);
+
+                        //If the status is pending approval, back to pending creation
+                        if (updateAudit.StatusId.Equals(AudConstants.AUD_STATUS_PENDING_ENGAGEMENT_LETTER_APPROVAL))
+                        {
+                            updateAudit.StatusId = HandleWorkflow(updateAudit.HistoryInfo, updateAudit.Id, ValidTriggers.Trigger.EngagementLetterMarkedNotReadyForApproval);
+                        }
+                    }
+                }
+
+                svcBuf.SetServiceInvocationFocusObject(updateAudit);
+            }
+            catch (Exception ex)
+            {
+                if (ex is EditPerformedException)
+                { svcBuf.ServiceException = new EditPerformedException(updateAudit.ResourceMan.GetString("EditPerformedException")); }
+                else if (ex is AuditNotFoundException)
+                { svcBuf.ServiceException = new AuditNotFoundException(updateAudit.ResourceMan.GetString("AuditNotFoundException")); }
+                else if (ex is AuditDeletedException)
+                { svcBuf.ServiceException = new AuditDeletedException(updateAudit.ResourceMan.GetString("AuditDeletedException")); }
+                else
+                { throw; }
+            }
+
+            return svcBuf;
+        }
