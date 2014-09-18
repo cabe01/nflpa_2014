@@ -1,0 +1,190 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using HPMSEnterpriseLibrary.BaseObjects.impl;
+using HPMSEnterpriseLibrary.BaseObjects.interfaces;
+using HPMSEnterpriseLibrary.BaseObjects.Util;
+using Microsoft.Practices.EnterpriseLibrary.Validation;
+using Microsoft.Practices.EnterpriseLibrary.Validation.Validators;
+using System.Resources;
+using System.Reflection;
+using System.Web;
+using Oracle.DataAccess.Client;
+
+namespace HPMS_AUD_SharedObjects.SharedObjects.domain.aud.transit
+{
+    [Serializable]
+    [HasSelfValidation]
+    public class SearchParametersTO : BaseValidateableTO
+    {
+        private Dictionary<String, String> _friendlyFieldLabels = new Dictionary<String, String>();
+
+        public virtual UserTO User { get; set; }
+        public virtual string UserId { get; set; }
+        public virtual string AuditId { get; set; }
+        public virtual string ContractId { get; set; }
+        public virtual Dictionary<String, String> ParentOrg { get; set; }
+        public virtual Dictionary<String, String> Status { get; set; }
+
+        public SearchParametersTO()
+        {
+            InitLocalClassVariables();
+        }
+
+        public SearchParametersTO(ResourceManager resourceManager) : base(resourceManager)
+        {
+            InitLocalClassVariables();
+        }
+
+
+
+        public IList<String> GetAllSearchableProperties()
+        {
+            return _friendlyFieldLabels.Keys.ToList();
+        }
+
+        public String GetFriendlyFieldLabel(String propertyName)
+        {
+            return _friendlyFieldLabels[propertyName];
+        }
+
+        public String GetFriendlyFieldValue(String propertyName)
+        {
+            StringBuilder friendlyValue = new StringBuilder();
+            PropertyInfo piField = typeof(SearchParametersTO).GetProperty(propertyName);
+
+            if (!piField.PropertyType.IsGenericType)
+            {
+                string piValue = (String)piField.GetValue(this, null);
+                if (!String.IsNullOrEmpty(piValue))
+                {
+                    friendlyValue.Append(piValue);
+                }
+                else
+                {
+                    friendlyValue.Append("All ");
+                }
+            }
+            else
+            {
+                IDictionary piValues = (IDictionary)piField.GetValue(this, null);
+                if (piValues.Count == 1)
+                {
+                    foreach (string li in piValues.Values)
+                    {
+                        friendlyValue.Append(String.Format(friendlyValue.Length != 0 ? ", {0}" : "{0}", li));
+                    }
+                }
+                else
+                {
+                    friendlyValue.Append("All ");
+                }
+            }
+            return friendlyValue.ToString();
+        }
+
+        public OracleParameter GetOracleParameter(String propertyName)
+        {
+            PropertyInfo piField = typeof(SearchParametersTO).GetProperty(propertyName);
+
+            // check if paramName is not a collection type proceed : else loop over the collection
+            OracleParameter op = new OracleParameter(":" + propertyName, GetOracleDbType(piField));
+            op.Value = (String)this.GetType().GetProperty(propertyName).GetValue(this, null);
+            return op;
+        }
+        private OracleDbType GetOracleDbType(PropertyInfo data)
+        {
+            OracleDbType dbType = new OracleDbType();
+            switch (data.PropertyType.Name)
+            { 
+                case "String":
+                    dbType = OracleDbType.Varchar2;
+                    break;
+                case "Int":
+                    dbType = OracleDbType.Int16;
+                    break;
+                default:
+                    dbType = OracleDbType.Varchar2;
+                    break;
+            }
+            return dbType;
+        }
+        
+        public bool ExistsNonNullSearchParameter()
+        {
+            List<String> LiOfFields = new List<String>();
+            LiOfFields = typeof(SearchParametersTO).GetProperties()
+                    .Where(prop => prop.Name != "UserId" && prop.Name != "User")
+                    .Select(prop => prop.GetValue(this, null))
+                    .Where(val => val != null)
+                    .Select(val => val.ToString())
+                    .Where(str => str.Length > 0)
+                    .ToList();
+
+            if (LiOfFields.Count > 0)
+            {
+                return true;
+            }
+            return false;
+        }
+        
+
+
+        private void InitLocalClassVariables()
+        {
+            Status = new Dictionary<String, String>();
+            ParentOrg = new Dictionary<String, String>();
+            InitFriendlyFields();
+        }
+        private void InitFriendlyFields()
+        {
+            _friendlyFieldLabels.Add("AuditId", "Audit Id");
+            _friendlyFieldLabels.Add("ContractId", "Contract Id");
+            _friendlyFieldLabels.Add("ParentOrg", "Parent Organization");
+            _friendlyFieldLabels.Add("Status", "Status");
+        }
+
+
+
+        [SelfValidation]
+        public void IsValid(ValidationResults results)
+        {
+            String strBlankField = ResourceMan.GetString("Blank_Field");
+            String strInvalidLength = ResourceMan.GetString("Invalid_Char");
+            String strInvalidChar = ResourceMan.GetString("Invalid_Char");
+        
+            IDictionary<String, String> FieldsToBeValidated = new Dictionary<String, String>();
+            FieldsToBeValidated.Add("Audit ID", AuditId);
+            FieldsToBeValidated.Add("Contract ID", ContractId);
+
+            ValidateInvalidCharacters(results, FieldsToBeValidated);
+
+            if (results.Count<ValidationResult>() > 0)
+            { return; }
+
+            foreach (string poKey in ParentOrg.Keys)
+            {
+                int i;
+                Int32.TryParse("1" + poKey, out i);
+                if (results.Count<ValidationResult>() == 0 && i==0)
+                {
+                    results.AddResult(new ValidationResult(String.Format(strBlankField, GetFriendlyFieldLabel("ParentOrg")), this, null, null, null));
+                }
+            }
+
+            foreach (string statusKey in Status.Keys)
+            {
+                int i;
+                Int32.TryParse("1" + statusKey, out i);
+                if (results.Count<ValidationResult>() == 0 && i == 0)
+                {
+                    results.AddResult(new ValidationResult(String.Format(strBlankField, GetFriendlyFieldLabel("Status")), this, null, null, null));
+                }
+            }
+        }
+    }
+}
