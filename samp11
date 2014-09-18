@@ -1,0 +1,89 @@
+public IServiceBuffer IsFileAllowedForUser(IServiceBuffer serviceData)
+        {
+            FileSecurityCheckTO fileSecurityCheck = serviceData.GetServiceInvocationFocusObject() as FileSecurityCheckTO;
+
+            bool bIsFileAllowed = false;
+            AuditFilePathTO auditLevel = new AuditFilePathTO();
+            // 1) Find out if we're at the CPA or audit level (check for /CPA/)
+            // 2) Determine whether or not the file should be shown
+            //string baseDirectory = _domainService.MetadataContainer.ApplicationConfigurationDict["AudLookup"]["AUD_File_Upload_Dir"]);
+            
+            // Get user accesstype list
+            IServiceBuffer sbSendGetAccessTypes = new ServiceBufferImpl();
+            sbSendGetAccessTypes.SetServiceInvocationFocusObject(fileSecurityCheck.UserId);
+            if (log.IsDebugEnabled) log.Debug("IsFileAllowedForUser: before domain layer call to get accesstypes");
+            List<string> liAccessTypes = _domainService.GetUserAccessTypes(sbSendGetAccessTypes).GetServiceInvocationFocusObject() as List<string>;
+            if(log.IsDebugEnabled)
+            {
+                string accessTypeString = string.Join(",", liAccessTypes.ToArray());
+                log.DebugFormat("IsFileAllowedForUser: access types returned: {0}", accessTypeString);
+            }
+
+            // If the directory we're looking in is whitelisted, or if the user is a CMS admin, then they are allowed to see the file
+            if (liAccessTypes.Contains(AudConstants.AUD_ACCESSTYPE_CMS_AUDIT_ADMIN) || IsInWhitelistDirectory(fileSecurityCheck.FilePath))
+            {
+                if (log.IsDebugEnabled) log.DebugFormat("IsFileAllowedForUser: This is an audit admin user or the directory is whitelisted");
+                bIsFileAllowed = true;
+            }
+            else
+            {
+                // We're guaranteed that this is a non-admin CMS user at this point.  We need to check this user against the assignment table.
+                // If this is a plan user, we have to check the contracts on this audit to the contracts they are assigned to.
+
+                // Get the accesstype group
+                AudConstants.ENUM_ACCESSTYPE_GROUP enumAccesstypeGroup;
+                AudConstants.GetAuditAccessTypeDictionary().TryGetValue(liAccessTypes[0], out enumAccesstypeGroup);
+                if (log.IsDebugEnabled) log.DebugFormat("IsFileAllowedForUser: Enum access type being found: {0}", enumAccesstypeGroup);
+
+                if (IsCPALevel(fileSecurityCheck.FilePath))
+                {
+                    // Get the id for both CPA and Audit
+                    // RRD: We're not limiting anything by CPA right now
+                    AuditFilePathTO cpaLevel = GetNextIntParentDirectory(fileSecurityCheck.FilePath);
+                    if (log.IsDebugEnabled) log.DebugFormat("IsFileAllowedForUser: In IsCPALevel case, CPAlevel path being returned: {0}", cpaLevel.Path);
+                    auditLevel = GetNextIntParentDirectory(cpaLevel.Path);
+                    if (log.IsDebugEnabled) log.DebugFormat("IsFileAllowedForUser: In IsCPALevel case, Audit id being returned: {0}", auditLevel.Id);
+                }
+                else
+                {
+                    // Get the id for Audit
+                    auditLevel = GetNextIntParentDirectory(fileSecurityCheck.FilePath);
+                    if (log.IsDebugEnabled) log.DebugFormat("IsFileAllowedForUser: Not CPA level, Audit id being returned: {0}", auditLevel.Id);
+                }
+
+                // Check for audit level access
+                AuditAuthorizationTO auditAuthorization = new AuditAuthorizationTO();
+                auditAuthorization.AccesstypeGroup = enumAccesstypeGroup;
+                auditAuthorization.AuditId = auditLevel.Id;
+                auditAuthorization.UserId = fileSecurityCheck.UserId;
+
+                IServiceBuffer sbSendVerifyAuditAccess = new ServiceBufferImpl();
+                sbSendVerifyAuditAccess.SetServiceInvocationFocusObject(auditAuthorization);
+                if (log.IsDebugEnabled) log.DebugFormat("IsFileAllowedForUser: Before domain layer call for VerifyAuditAccessForUser.  Passing in AccesstypeGroup: {0}, Audit Id: {1}, User Id: {2}", auditAuthorization.AccesstypeGroup, auditAuthorization.AuditId, auditAuthorization.UserId);
+                bIsFileAllowed = Convert.ToBoolean(_domainService.VerifyAuditAccessForUser(sbSendVerifyAuditAccess).GetServiceInvocationFocusObject());
+                if (log.IsDebugEnabled) log.DebugFormat("IsFileAllowedForUser: After domain layer call for VerifyAuditAccessForUser.  Returned {0}", bIsFileAllowed);
+
+                // if plan users attempt to access a restrict file type then fail authorization.
+                if (AudConstants.ENUM_ACCESSTYPE_GROUP.PLAN_USER.Equals(enumAccesstypeGroup))
+                {
+                    String strParentDir = (Directory.GetParent(fileSecurityCheck.FilePath)).Name;
+                    String strFileName = Path.GetFileNameWithoutExtension(fileSecurityCheck.FilePath);
+                    int intParentRootId;
+                    Boolean blnIsParentRoot = Int32.TryParse(strParentDir, out intParentRootId);
+
+                    if (AUDFileUploadConstants.AUD_DIR_NAME_CMS_INTERNAL.Equals(strParentDir)
+                        || (AUDFileUploadConstants.AUD_FILE_NAME_AUDIT_BRIEF.Equals(strFileName) && blnIsParentRoot)
+                        || (AUDFileUploadConstants.AUD_FILE_NAME_CMS_EXCEL.Equals(strFileName) && blnIsParentRoot))
+                    {
+                        bIsFileAllowed = false;
+                        if (log.IsDebugEnabled) log.DebugFormat("IsFileAllowedForUser: Plan user access not allowed for file: {0}", fileSecurityCheck.FilePath);
+                        if (log.IsDebugEnabled) log.DebugFormat("IsFileAllowedForUser: Plan user access not allowed for file in parent directory: {0}", strParentDir);
+                    }
+                }
+
+            }
+
+            IServiceBuffer sbReturnBuffer = new ServiceBufferImpl();
+            sbReturnBuffer.SetServiceInvocationFocusObject(bIsFileAllowed);
+            return sbReturnBuffer;
+        }
