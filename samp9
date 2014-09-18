@@ -1,0 +1,315 @@
+using System;
+using HPMS_AUD_ApplicationServices.AUD.interfaces;
+using HPMS_AUD_DomainServices.AUD.interfaces;
+using HPMS_AUD_SharedObjects;
+using HPMS_AUD_SharedObjects.Exceptions;
+using HPMS_AUD_SharedObjects.SharedObjects.domain.aud.transit;
+using HPMS_AUD_SharedObjects.SharedObjects.domain.workflow.constants;
+using HPMS_AUD_SharedObjects.SharedObjects.domain.workflow.transit;
+using HPMSEnterpriseLibrary.BaseObjects.impl;
+using HPMSEnterpriseLibrary.BaseObjects.interfaces;
+using Stateless;
+
+namespace HPMS_AUD_ApplicationServices.AUD.helpers
+{
+    public class WorkflowHelper
+    {
+        StateMachine<ValidStates.State, ValidTriggers.Trigger> _machine;
+        IAudDomainService _domainService;
+        IAUDManager _audManager;
+        ValidStates.State _currentState = ValidStates.State.InvalidState;
+        int _iCurrentAuditNumber = -1;
+        private HistoryInfoTO _currentHistoryInfoTO;
+
+        // Define triggers that contain parameters here
+        // When you fire one of these triggers, you'll be able to pass in a TriggerTO along with the trigger name in the fire method
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _createdTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _newCPAAddedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _teamAssignedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _elMarkedReadyForApprovalTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _elMarkedNotReadyForApprovalTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _elApprovedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _draftReportUploadedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _draftReportDeletedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _draftReportApprovedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _draftReportAttestedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _draftResponseUploadedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _draftResponseDeletedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _finalReportUploadedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _finalReportApprovedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _finalReportDeletedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _finalAttestationPerformedTrigger;
+        //[Ruchi] - Added the trigger for corrective action attestation performed
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _correctiveActionAttestationPerformedTrigger;
+        //End
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _closedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _repopenedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _deletedTrigger;
+        StateMachine<ValidStates.State, ValidTriggers.Trigger>.TriggerWithParameters<StateMachineInfoTO> _cancelledTrigger;
+
+        /// <summary>
+        /// Method takes in a reference to the domain service so we can get info from the DB
+        /// </summary>
+        /// <param name="stateMachineSetupTO"></param>
+        /// <param name="domainService"></param>
+        /// <param name="audService"></param>
+        public WorkflowHelper(StateMachineInfoTO stateMachineSetupTO, IAudDomainService domainService, IAUDManager audManager)
+        {
+            _domainService = domainService;
+            _audManager = audManager;
+            _currentHistoryInfoTO = stateMachineSetupTO.HistoryInfo;
+
+            _machine = new StateMachine<ValidStates.State, ValidTriggers.Trigger>(() => GetCurrentState(stateMachineSetupTO), s => SetCurrentState(s));
+
+            // Assign a trigger to a parameterized trigger
+            _createdTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.Created);
+            _newCPAAddedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.NewCPAAdded);
+            _teamAssignedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.TeamAssigned);
+            _elMarkedReadyForApprovalTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.EngagementLetterMarkedReadyForApproval);
+            _elMarkedNotReadyForApprovalTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.EngagementLetterMarkedNotReadyForApproval);
+            _elApprovedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.EngagementLetterApproved);
+            _draftReportUploadedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.DraftReportUploaded);
+            _draftReportDeletedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.DraftReportDeleted);
+            _draftReportApprovedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.DraftReportApproved);
+            _draftReportAttestedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.DraftReportRecieptAttested);
+            _draftResponseUploadedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.DraftResponseUploaded);
+            _draftResponseDeletedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.DraftResponseDeleted);
+            _finalReportUploadedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.FinalReportUploaded);
+            _finalReportApprovedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.FinalReportApproved);
+            _finalReportDeletedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.FinalReportDeleted);
+            _finalAttestationPerformedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.FinalAttestationPerformed);
+            //[Ruchi] - Added the trigger for corrective action attestation performed
+            _correctiveActionAttestationPerformedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.CorrectiveActionAttestationPerformed);
+            //End
+            _closedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.Closed);
+            _repopenedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.Reopened);
+            _deletedTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.Deleted);
+            _cancelledTrigger = _machine.SetTriggerParameters<StateMachineInfoTO>(ValidTriggers.Trigger.Cancelled);
+
+            // Configure the various states
+            _machine.Configure(ValidStates.State.NewAuditCreated)
+                .Permit(ValidTriggers.Trigger.Created, ValidStates.State.PendingTeamAssignment);
+
+            _machine.Configure(ValidStates.State.PendingTeamAssignment)
+                .Permit(ValidTriggers.Trigger.TeamAssigned, ValidStates.State.PendingEngagementLetterCreation)
+                .Permit(ValidTriggers.Trigger.Deleted, ValidStates.State.Deleted)
+                .PermitReentry(ValidTriggers.Trigger.NewCPAAdded);
+
+            _machine.Configure(ValidStates.State.PendingEngagementLetterCreation)
+                .Permit(ValidTriggers.Trigger.EngagementLetterMarkedReadyForApproval,
+                        ValidStates.State.PendingEngagementLetterApproval)
+                .Permit(ValidTriggers.Trigger.NewCPAAdded, ValidStates.State.PendingTeamAssignment)
+                .Permit(ValidTriggers.Trigger.Deleted, ValidStates.State.Deleted)
+                .PermitReentry(ValidTriggers.Trigger.TeamAssigned)
+                .PermitReentry(ValidTriggers.Trigger.EngagementLetterMarkedNotReadyForApproval);
+
+            _machine.Configure(ValidStates.State.PendingEngagementLetterApproval)
+                .Permit(ValidTriggers.Trigger.EngagementLetterApproved, ValidStates.State.PendingDraftReportUpload)
+                .Permit(ValidTriggers.Trigger.EngagementLetterMarkedNotReadyForApproval, ValidStates.State.PendingEngagementLetterCreation)
+                .Permit(ValidTriggers.Trigger.NewCPAAdded, ValidStates.State.PendingTeamAssignment)
+                .Permit(ValidTriggers.Trigger.Deleted, ValidStates.State.Deleted)
+                .PermitReentry(ValidTriggers.Trigger.TeamAssigned)
+                .PermitReentry(ValidTriggers.Trigger.EngagementLetterMarkedReadyForApproval);
+
+            _machine.Configure(ValidStates.State.PendingDraftReportUpload)
+                .Permit(ValidTriggers.Trigger.DraftReportUploaded, ValidStates.State.PendingDraftReportApproval)
+                .Permit(ValidTriggers.Trigger.Cancelled, ValidStates.State.Cancelled)
+                .PermitReentry(ValidTriggers.Trigger.TeamAssigned)
+                .OnEntryFrom(_elApprovedTrigger, triggerTo => TriggerSendEmail(triggerTo, AudConstants.EMAIL_TEMPLATE_ENGAGEMENT_LETTER));
+
+            _machine.Configure(ValidStates.State.PendingDraftReportApproval)
+                .Permit(ValidTriggers.Trigger.DraftReportDeleted, ValidStates.State.PendingDraftReportUpload)
+                .Permit(ValidTriggers.Trigger.DraftReportApproved, ValidStates.State.PendingDraftReportRecieptAttestation)
+                .Permit(ValidTriggers.Trigger.Cancelled, ValidStates.State.Cancelled)
+                .PermitReentry(ValidTriggers.Trigger.TeamAssigned);
+            
+            _machine.Configure(ValidStates.State.PendingDraftReportRecieptAttestation)
+                .Permit(ValidTriggers.Trigger.DraftReportRecieptAttested, ValidStates.State.PendingDraftReportResponseUpload)
+                .Permit(ValidTriggers.Trigger.FinalReportUploaded, ValidStates.State.PendingFinalReportApproval)
+                .Permit(ValidTriggers.Trigger.Cancelled, ValidStates.State.Cancelled)
+                .PermitReentry(ValidTriggers.Trigger.TeamAssigned)
+                .OnEntryFrom(_draftReportApprovedTrigger, triggerTo => TriggerSendEmail(triggerTo, AudConstants.EMAIL_TEMPLATE_DRAFT_REPORT));
+
+            _machine.Configure(ValidStates.State.PendingDraftReportResponseUpload)
+                .Permit(ValidTriggers.Trigger.DraftResponseUploaded, ValidStates.State.PendingFinalReportUpload)
+                .Permit(ValidTriggers.Trigger.FinalReportUploaded, ValidStates.State.PendingFinalReportApproval)
+                .Permit(ValidTriggers.Trigger.Cancelled, ValidStates.State.Cancelled)
+                .PermitReentry(ValidTriggers.Trigger.TeamAssigned);
+
+            _machine.Configure(ValidStates.State.PendingFinalReportUpload)
+                .Permit(ValidTriggers.Trigger.DraftResponseDeleted, ValidStates.State.PendingDraftReportResponseUpload)
+                .Permit(ValidTriggers.Trigger.FinalReportUploaded, ValidStates.State.PendingFinalReportApproval)
+                .Permit(ValidTriggers.Trigger.Cancelled, ValidStates.State.Cancelled)
+                .PermitReentry(ValidTriggers.Trigger.TeamAssigned)
+                .OnEntryFrom(_draftResponseUploadedTrigger, triggerTo => TriggerSendEmail(triggerTo, AudConstants.EMAIL_TEMPLATE_DRAFT_RESPONSE));
+
+            _machine.Configure(ValidStates.State.PendingFinalReportApproval)
+                .Permit(ValidTriggers.Trigger.FinalReportDeleted, ValidStates.State.PendingFinalReportUpload)
+                .Permit(ValidTriggers.Trigger.FinalReportApproved, ValidStates.State.PendingFinalAttestation)
+                .Permit(ValidTriggers.Trigger.Cancelled, ValidStates.State.Cancelled)
+                .PermitReentry(ValidTriggers.Trigger.TeamAssigned);
+
+            _machine.Configure(ValidStates.State.PendingFinalAttestation)
+                .Permit(ValidTriggers.Trigger.FinalAttestationPerformed, ValidStates.State.PendingCorrectiveActionAttestation)
+                .Permit(ValidTriggers.Trigger.Cancelled, ValidStates.State.Cancelled)
+                .PermitReentry(ValidTriggers.Trigger.TeamAssigned)
+                .OnEntryFrom(_finalReportApprovedTrigger, triggerTo => TriggerSendEmail(triggerTo, AudConstants.EMAIL_TEMPLATE_FINAL_REPORT));
+
+            _machine.Configure(ValidStates.State.PendingCorrectiveActionAttestation)
+               .Permit(ValidTriggers.Trigger.CorrectiveActionAttestationPerformed, ValidStates.State.PendingClose)
+               .Permit(ValidTriggers.Trigger.Cancelled, ValidStates.State.Cancelled)
+               .PermitReentry(ValidTriggers.Trigger.TeamAssigned);
+
+            _machine.Configure(ValidStates.State.PendingClose)
+                .Permit(ValidTriggers.Trigger.Closed, ValidStates.State.Closed)
+                .Permit(ValidTriggers.Trigger.Cancelled, ValidStates.State.Cancelled)
+                .PermitReentry(ValidTriggers.Trigger.TeamAssigned);
+
+            _machine.Configure(ValidStates.State.Closed)
+                .Permit(ValidTriggers.Trigger.Reopened, ValidStates.State.PendingClose);
+        }
+
+        /// <summary>
+        /// Method will go to DB and query for the current state
+        /// </summary>
+        /// <param name="stateMachineSetupTO"></param>
+        /// <returns></returns>
+        private ValidStates.State GetCurrentState(StateMachineInfoTO stateMachineInfoTO)
+        {
+            if (ValidStates.State.InvalidState.Equals(_currentState))
+            {
+                IServiceBuffer serviceBuffer = new ServiceBufferImpl();
+                serviceBuffer.SetServiceInvocationFocusObject(stateMachineInfoTO);
+                IServiceBuffer returnBuffer = _domainService.GetCurrentState(serviceBuffer);
+                ValidStates.State currentState = (ValidStates.State)returnBuffer.GetServiceInvocationFocusObject();
+                _currentState = currentState;
+                _iCurrentAuditNumber = stateMachineInfoTO.AuditId;
+            }
+            return _currentState;
+        }
+
+        /// <summary>
+        /// Method will set the new state in the DB
+        /// </summary>
+        /// <param name="newState"></param>
+        private void SetCurrentState(ValidStates.State newState)
+        {
+            StateMachineInfoTO stateMachineInfoTO = new StateMachineInfoTO();
+            stateMachineInfoTO.HistoryInfo = _currentHistoryInfoTO;
+            stateMachineInfoTO.AuditId = _iCurrentAuditNumber;
+            stateMachineInfoTO.NewStatusId = newState;
+            IServiceBuffer serviceBuffer = new ServiceBufferImpl();
+            serviceBuffer.SetServiceInvocationFocusObject(stateMachineInfoTO);
+            _domainService.SetCurrentState(serviceBuffer);
+            _currentState = newState;
+        }
+
+        #region Public Methods for Trigger Firing
+
+        /// <summary>
+        /// Method will take in a stateMachineInfoTO object which states what trigger to fire and parameters, if any, for the trigger
+        /// </summary>
+        /// <param name="stateMachineInfoTO"></param>
+        public void FireBasedOnTrigger(StateMachineInfoTO stateMachineInfoTO)
+        {
+            ValidTriggers.Trigger triggerToFire = stateMachineInfoTO.TriggerToFire;
+            switch (triggerToFire)
+            {
+                case ValidTriggers.Trigger.Created:
+                    _machine.Fire(_createdTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.NewCPAAdded:
+                    _machine.Fire(_newCPAAddedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.TeamAssigned:
+                    _machine.Fire(_teamAssignedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.EngagementLetterMarkedReadyForApproval:
+                    _machine.Fire(_elMarkedReadyForApprovalTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.EngagementLetterMarkedNotReadyForApproval:
+                    _machine.Fire(_elMarkedNotReadyForApprovalTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.EngagementLetterApproved:
+                    _machine.Fire(_elApprovedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.DraftReportUploaded:
+                    _machine.Fire(_draftReportUploadedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.DraftReportDeleted:
+                    _machine.Fire(_draftReportDeletedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.DraftReportApproved:
+                    _machine.Fire(_draftReportApprovedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.DraftReportRecieptAttested:
+                    _machine.Fire(_draftReportAttestedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.DraftResponseUploaded:
+                    _machine.Fire(_draftResponseUploadedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.DraftResponseDeleted:
+                    _machine.Fire(_draftResponseDeletedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.FinalReportUploaded:
+                    _machine.Fire(_finalReportUploadedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.FinalReportDeleted:
+                    _machine.Fire(_finalReportDeletedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.FinalReportApproved:
+                    _machine.Fire(_finalReportApprovedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.FinalAttestationPerformed:
+                    _machine.Fire(_finalAttestationPerformedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.CorrectiveActionAttestationPerformed:
+                    _machine.Fire(_correctiveActionAttestationPerformedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.Closed:
+                    _machine.Fire(_closedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.Reopened:
+                    _machine.Fire(_repopenedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.Deleted:
+                    _machine.Fire(_deletedTrigger, stateMachineInfoTO);
+                    break;
+                case ValidTriggers.Trigger.Cancelled:
+                    _machine.Fire(_cancelledTrigger, stateMachineInfoTO);
+                    break;
+            }
+        }
+
+        #endregion
+
+        #region Methods called by triggers
+
+        private void TriggerSendEmail(StateMachineInfoTO stateMachineInfoTO, int intEmailTemplateId)
+        {
+            try
+            {
+                IServiceBuffer emailInfoServiceBuffer = InitializeEmailInfoTOForSendEmail(stateMachineInfoTO, intEmailTemplateId);
+                _audManager.SendEmail(emailInfoServiceBuffer);
+            }
+            catch (Exception e)
+            {
+                throw new SendEmailException("Exception in sending mail method called from workflow", e);
+            }
+        }
+        #endregion
+
+        private IServiceBuffer InitializeEmailInfoTOForSendEmail(StateMachineInfoTO stateMachineInfoTO, int templateNumber)
+        {
+            EmailInfoTO emailInfo = new EmailInfoTO();
+            emailInfo.Audit.Id = stateMachineInfoTO.AuditId;
+            emailInfo.EmailTemplate.ID = templateNumber;
+            emailInfo.BaseViewDirectoryForLetters = stateMachineInfoTO.BaseViewDirectoryForLetters;
+
+            IServiceBuffer serviceBuffer = new ServiceBufferImpl();
+            serviceBuffer.SetServiceInvocationFocusObject(emailInfo);
+
+            return serviceBuffer;
+        }
+    }
+}
