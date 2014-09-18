@@ -1,0 +1,93 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Reflection;
+using System.Resources;
+using HPMS_AUD_SharedObjects.SharedObjects.domain.aud.constants;
+using Microsoft.Practices.EnterpriseLibrary.Validation;
+using Microsoft.Practices.EnterpriseLibrary.Validation.Validators;
+using Oracle.DataAccess.Client;
+
+namespace HPMS_AUD_SharedObjects.SharedObjects.domain.aud.transit
+{
+    [Serializable]
+    [HasSelfValidation]
+    public class SearchRequestTO : BaseValidateableTO
+    {
+        #region Properties
+        private Dictionary<string, string> _friendlyRequestCriteria = new Dictionary<string, string>();
+
+        public virtual string UserId { get; set; }
+        public virtual string ParentOrgName { get; set; }
+
+        public virtual string AuditId { get; set; }
+        public virtual string ParentOrgId { get; set; }
+        public virtual string DocType { get; set; }
+        public virtual string DocTypeId { get; set; }
+        #endregion
+
+        #region Contructors
+        public SearchRequestTO() { }
+        public SearchRequestTO(ResourceManager resourceManager) : base(resourceManager) { }
+        #endregion
+
+
+        public Dictionary<string, string> GetFriendlyRequestCriteria()
+        {
+            if (IsFriendlyRequestCriteriaEmpty())
+            {
+                foreach (PropertyInfo criteria in this.GetType().GetProperties())
+                {
+                    switch (criteria.Name)
+                    {
+                        case "AuditId":
+                            _friendlyRequestCriteria.Add("Audit ID", String.IsNullOrEmpty(AuditId) ? "Any" : AuditId);
+                            break;
+                        case "ParentOrgId":
+                            _friendlyRequestCriteria.Add("Parent Organization", ParentOrgName);
+                            break;
+                        case "DocType":
+                            _friendlyRequestCriteria.Add("Document Type", DocType);
+                            break;
+                    }
+                }
+            }
+            return _friendlyRequestCriteria;
+        }
+        private Boolean IsFriendlyRequestCriteriaEmpty()
+        {
+            return _friendlyRequestCriteria.Count == 0;
+        }
+
+        [SelfValidation]
+        public void IsValid(ValidationResults results)
+        {
+            String strBlankField = ResourceMan.GetString("Blank_Field");
+            String strNotInteger = ResourceMan.GetString("Non_Integer");
+
+            // check that the data being stored does not contain invailid characters
+            IDictionary<string, string> FieldsToBeValidated = new Dictionary<string, string>();
+            FieldsToBeValidated.Add("Audit ID", AuditId);
+            FieldsToBeValidated.Add("Parent Organization", ParentOrgName);
+            FieldsToBeValidated.Add("Document Type", DocType);
+            ValidateInvalidCharacters(results, FieldsToBeValidated);
+
+            // exit if the data does contains invailid characters
+            if (results.Count<ValidationResult>() > 0)
+            { return; }
+
+            // check that properties meet their constraints
+            // - AuditID must be an integer
+            int val;
+            if (!String.IsNullOrEmpty(AuditId))
+            {
+                if (!Int32.TryParse(AuditId, out val)) results.AddResult(new ValidationResult(String.Format(strNotInteger, "Audit ID"), this, null, null, null));
+            }
+            // - DocType must have a value
+            if (String.IsNullOrEmpty(DocType)) results.AddResult(new ValidationResult(String.Format(strBlankField, "Document Type"), this, null, null, null));
+        }
+
+    }
+
+}
