@@ -1,0 +1,253 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Web.UI.WebControls;
+using HPMS_AUD_HttpApplicationDefinition.BaseControl.AUD;
+using HPMS_AUD_HttpApplicationDefinition.BasePages.AUD;
+using HPMS_AUD_SharedObjects;
+using HPMS_AUD_SharedObjects.SharedObjects.domain.aud.transit;
+
+namespace HPMS_AUD_WebApp.UserControls
+    {
+    public partial class SearchResultControl : HpmsAudBaseControl
+        {
+        int iCurrentPageIndex;
+        int iMaxGridRecord;
+        int iTotalRowCount;
+
+        protected void Page_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        public UserTO CurrentUser { get; set; }
+
+        /// <summary>
+        /// Columns in gridview control:
+        /// 0: Audit ID, 1: Parent Org Name, 2: Status Description, 3: Audit Search Links
+        /// </summary>
+        /// <param name="lstResults"></param>
+        public void SetResultData(IList<SearchResultTO> lstResults)
+        {
+            // look to the current SearchParametersTO for search criteria
+            SearchParametersTO objSearchParam = (SearchParametersTO)((HPMSAudModuleBasePage)this.Page).AudNetSession["SearchParam"];
+            if (objSearchParam != null)
+            {
+                StringBuilder sSearchParam = new StringBuilder();
+
+                sSearchParam.Append("Criteria: ");
+
+                // build displayable list of searched criteria 
+                foreach (String propName in objSearchParam.GetAllSearchableProperties())
+                {
+                    sSearchParam.AppendFormat(" <b>{0}</b> = {1}", objSearchParam.GetFriendlyFieldLabel(propName), Server.HtmlEncode(objSearchParam.GetFriendlyFieldValue(propName)));
+                }
+                lblCriteria.Text = sSearchParam.ToString();
+            }
+
+            ((HPMSAudModuleBasePage)this.Page).AudNetSession["SearchResult"] = lstResults;
+            gvReviewResult.PageSize = Convert.ToInt32(AudSvcFacade.MetadataContainer.ApplicationConfigurationDict["AudLookup"]["SEARCH_RESULTS_PER_PAGE"].ToString());
+            gvReviewResult.DataSource = lstResults;
+            gvReviewResult.DataBind();
+
+            iMaxGridRecord = gvReviewResult.PageSize;
+            iCurrentPageIndex = gvReviewResult.PageIndex;
+            if (lstResults != null) { iTotalRowCount = lstResults.Count; }
+
+            if (this.gvReviewResult.Rows.Count > 0)
+            {
+                if (iCurrentPageIndex * iMaxGridRecord == 0)
+                {
+                    lblPage.Text = "Audit(s) 1 to " + ((iCurrentPageIndex + 1) * iMaxGridRecord > iTotalRowCount ? iTotalRowCount : (iCurrentPageIndex + 1) * iMaxGridRecord) + " " + "(of " + iTotalRowCount + ")";
+                }
+            }
+            else { lblPage.Text = "Audit 0 to 0 (of 0)"; }
+
+            SetTableSummary();
+        }
+
+        protected void lnkView_Click(object sender, EventArgs e)
+        {
+            ((HPMSAudModuleBasePage) this.Page).AudNetSession["ReadOnly"] = 1;
+            ((HPMSAudModuleBasePage) this.Page).AudNetSession["EditMode"] = null;
+            ((HPMSAudModuleBasePage) this.Page).AudNetSession["AuditID"] = ((LinkButton)(sender)).CommandArgument;
+            Response.Redirect(AudConstants.AUD_OVERVIEW_PAGE_URL);
+        }
+
+        protected void lnkEdit_Click(object sender, EventArgs e)
+        {
+            ((HPMSAudModuleBasePage)this.Page).AudNetSession["EditMode"] = 1;
+            ((HPMSAudModuleBasePage)this.Page).AudNetSession["ReadOnly"] = null;
+            ((HPMSAudModuleBasePage)this.Page).AudNetSession["AuditID"] = ((LinkButton)(sender)).CommandArgument;
+            Response.Redirect(AudConstants.AUD_OVERVIEW_PAGE_URL);
+        }
+
+        protected void lnkCancel_Click(object sender, EventArgs e)
+            {
+                ((HPMSAudModuleBasePage)this.Page).AudNetSession["AuditID"] = 
+                    ((LinkButton)(sender)).CommandArgument;
+
+                ((HPMSAudModuleBasePage)this.Page).AudNetSession["DeleteCancelAction"] = AudConstants.AUD_CANCEL_AUDIT_PAGE;
+
+                Response.Redirect(AudConstants.AUD_DELETE_PAGE_URL);
+            }
+
+        protected void lnkDelete_Click(object sender, EventArgs e)
+        {
+            ((HPMSAudModuleBasePage) this.Page).AudNetSession["AuditID"] =
+                ((LinkButton) (sender)).CommandArgument;
+
+            ((HPMSAudModuleBasePage)this.Page).AudNetSession["DeleteCancelAction"] = AudConstants.AUD_DELETE_AUDIT_PAGE;
+
+            Response.Redirect(AudConstants.AUD_DELETE_PAGE_URL);
+        }
+
+        protected void lnkReopen_Click(object sender, EventArgs e)
+        {
+            ((HPMSAudModuleBasePage)this.Page).AudNetSession["AuditID"] =
+                ((LinkButton)(sender)).CommandArgument;
+
+            Response.Redirect(AudConstants.AUD_REOPEN_PAGE_URL);
+        }
+
+        protected void lnkClose_Click(object sender, EventArgs e)
+        {
+            ((HPMSAudModuleBasePage)this.Page).AudNetSession["AuditID"] =
+                ((LinkButton)(sender)).CommandArgument;
+
+            Response.Redirect(AudConstants.AUD_CLOSE_PAGE_URL);
+        }
+
+        private void SetTableSummary()
+            {
+            StringBuilder sbSummary = new StringBuilder();
+            sbSummary.Append("The purpose of the audit search results table is to view a listing of audits filtered by the ");
+            sbSummary.Append("criteria set on the previous audit search page. The first row contains the following column headers ");
+            sbSummary.Append("from left to right; audit Id, parent organization, status, and action. ");
+            sbSummary.Append("The table is sorted by audit Id in descending order. The audits listed in the table can be accessed by clicking the view, ");
+            sbSummary.Append("edit, delete, and cancel hyperlinks (as applicable) found in the right-most column entitled “action”.");
+
+            this.gvReviewResult.Attributes.Add("Summary", sbSummary.ToString());
+            }
+
+        /// <summary>
+        /// e.Row.Cells[3] is the 4th column in the grid view controller which is currently the audit search action column.
+        /// Inside of this cell there are 3 links:
+        /// Controls[1]: View Link, Controls[3]: Edit Link, Controls[5]: Delete Link, Controls[7]: Cancel Link
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        protected void ReviewResultsGridView_RowDataBound(Object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                /*
+                    * Defining what links appear on the audit search results page. We start off with the accesstypes that have lesser permissions
+                    * and move down with accesstypes that have more permissions.  We want to design the system in a way in which accesstypes can be stacked in the
+                    * future.
+                    */
+
+                SearchResultTO curSearchResultTO = (SearchResultTO) e.Row.DataItem;
+                // Figure out what to hide and what to show
+                e.Row.Cells[3].Controls[1].Visible = DisplaySearchActionLink(AudConstants.ENUM_AUDIT_SEARCH_LINK.VIEW_AUDIT, curSearchResultTO);
+                e.Row.Cells[3].Controls[3].Visible = DisplaySearchActionLink(AudConstants.ENUM_AUDIT_SEARCH_LINK.EDIT_AUDIT, curSearchResultTO);
+                e.Row.Cells[3].Controls[5].Visible = DisplaySearchActionLink(AudConstants.ENUM_AUDIT_SEARCH_LINK.DELETE_AUDIT, curSearchResultTO);
+                e.Row.Cells[3].Controls[7].Visible = DisplaySearchActionLink(AudConstants.ENUM_AUDIT_SEARCH_LINK.CANCEL_AUDIT, curSearchResultTO);
+                e.Row.Cells[3].Controls[9].Visible = DisplaySearchActionLink(AudConstants.ENUM_AUDIT_SEARCH_LINK.CLOSE_AUDIT, curSearchResultTO);
+                e.Row.Cells[3].Controls[11].Visible = DisplaySearchActionLink(AudConstants.ENUM_AUDIT_SEARCH_LINK.REOPEN_AUDIT, curSearchResultTO);
+
+                if (AudSvcFacade.CompareAuditStatus(Convert.ToInt32(curSearchResultTO.StatusId), AudConstants.AUD_STATUS_CLOSED, AudConstants.STATUS_COMPARATOR.EQUAL))
+                {
+                    ((LinkButton)e.Row.Cells[3].Controls[3]).Text = "View";
+                }
+              
+            }
+
+            if (e.Row.RowType == DataControlRowType.Pager)
+                {
+                Table table = e.Row.Cells[0].Controls[0] as Table;
+
+                for (int i = 0; i < table.Rows[0].Cells.Count; i++)
+                    {
+                    if (!table.Rows[0].Cells[i].Controls[0].GetType().Name.Equals("Label"))
+                        {
+                        LinkButton lnk = table.Rows[0].Cells[i].Controls[0] as LinkButton;
+                        lnk.ToolTip = "Page " + lnk.Text;
+                        lnk.Text = "<span class='hdnLabel'>Page</span> " + lnk.Text;
+                        }
+                    else
+                        {
+                        Label lbl = table.Rows[0].Cells[i].Controls[0] as Label;
+                        lbl.Text = "<span class='hdnLabel'>Page</span> " + lbl.Text;
+                        }
+                    }
+                }
+            }
+
+        /// <summary>
+        /// Method responsible for determining when the view link should be displayed
+        /// </summary>
+        /// <param name="curSearchResultTO"></param>
+        /// <returns></returns>
+        private bool DisplaySearchActionLink(AudConstants.ENUM_AUDIT_SEARCH_LINK enumAuditSearchLink, SearchResultTO curSearchResultTO)
+        {
+            Boolean blnDisplayLink = true;
+            HPMSAudModuleBasePage basePage = (HPMSAudModuleBasePage)this.Page;
+            List<AccessRuleTO> lstAccessRules = basePage.AuditAccessRules;
+            int intAudStatusId = Convert.ToInt32(curSearchResultTO.StatusId);
+
+            switch (enumAuditSearchLink)
+            {
+                case AudConstants.ENUM_AUDIT_SEARCH_LINK.VIEW_AUDIT:
+                    blnDisplayLink = AudSvcFacade.UserHasPrivilege(CurrentUser, lstAccessRules, intAudStatusId, AudConstants.AUD_ACTION_VIEW_OVERVIEW_PAGE, curSearchResultTO.IsTeamMember);
+                    break;
+                case AudConstants.ENUM_AUDIT_SEARCH_LINK.EDIT_AUDIT:
+                    blnDisplayLink = AudSvcFacade.UserHasPrivilege(CurrentUser, lstAccessRules, intAudStatusId, AudConstants.AUD_ACTION_EDIT_OVERVIEW_PAGE, curSearchResultTO.IsTeamMember);
+                    break;
+                case AudConstants.ENUM_AUDIT_SEARCH_LINK.DELETE_AUDIT:
+                    blnDisplayLink = AudSvcFacade.UserHasPrivilege(CurrentUser, lstAccessRules, intAudStatusId, AudConstants.AUD_ACTION_DELETE_AUDIT_PAGE, curSearchResultTO.IsTeamMember);
+                    break;
+                case AudConstants.ENUM_AUDIT_SEARCH_LINK.CANCEL_AUDIT:
+                    blnDisplayLink = AudSvcFacade.UserHasPrivilege(CurrentUser, lstAccessRules, intAudStatusId, AudConstants.AUD_ACTION_CANCEL_AUDIT_PAGE, curSearchResultTO.IsTeamMember);
+                    break;
+                case AudConstants.ENUM_AUDIT_SEARCH_LINK.REOPEN_AUDIT:
+                    blnDisplayLink = AudSvcFacade.UserHasPrivilege(CurrentUser, lstAccessRules, intAudStatusId, AudConstants.AUD_ACTION_REOPEN_AUDIT, curSearchResultTO.IsTeamMember);
+                    break;
+                case AudConstants.ENUM_AUDIT_SEARCH_LINK.CLOSE_AUDIT:
+                    blnDisplayLink = AudSvcFacade.UserHasPrivilege(CurrentUser, lstAccessRules, intAudStatusId, AudConstants.AUD_ACTION_CLOSE_AUDIT, curSearchResultTO.IsTeamMember);
+                    break;
+            }
+
+            return blnDisplayLink;
+        }
+
+        protected void gvReviewResult_Paging(object sender, GridViewPageEventArgs e)
+        {
+            IList<SearchResultTO> lstRevResult = (List<SearchResultTO>)((HPMSAudModuleBasePage)this.Page).AudNetSession["SearchResult"];
+            gvReviewResult.PageIndex = e.NewPageIndex;
+            gvReviewResult.PageSize = Convert.ToInt32(AudSvcFacade.MetadataContainer.ApplicationConfigurationDict["AudLookup"]["SEARCH_RESULTS_PER_PAGE"].ToString());
+
+            this.gvReviewResult.DataSource = lstRevResult;
+            gvReviewResult.DataBind();
+
+            iMaxGridRecord = gvReviewResult.PageSize;
+            iCurrentPageIndex = gvReviewResult.PageIndex;
+            iTotalRowCount = lstRevResult.Count;
+
+            if (this.gvReviewResult.Rows.Count > 0)
+            {
+                lblPage.Text = "Audit(s) " + ((iCurrentPageIndex * iMaxGridRecord) + 1) + " to " + ((iCurrentPageIndex + 1) * iMaxGridRecord > iTotalRowCount ? iTotalRowCount : (iCurrentPageIndex + 1) * iMaxGridRecord) + " " + "(of " + iTotalRowCount + ")";
+            }
+        }
+
+        protected void btnBack_Click(object sender, EventArgs e)
+        {
+            Response.Redirect(AudConstants.AUD_SEARCH_PAGE_URL);
+        }
+
+        public Button GetBackButton
+        {
+            get { return btnBack; }
+        }
+        }
+    }
