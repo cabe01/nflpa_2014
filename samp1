@@ -1,0 +1,126 @@
+/*=========================== Comparator enum ===========================*/
+var COMPARATOR = {
+    EQUAL: { value: '=', name: "Equal To", code: "E" },
+    LESSER: { value: '<', name: "Less Than", code: "L" },
+    GREATER: { value: '>', name: "Greater Than", code: "G" }
+};
+
+/*=========================== Date class ===========================*/
+Date.compareDates = function(sDate1, sDate2, sComparator) {
+	var bResult = false;
+	if (Date.isValid(sDate1)) {
+		if (Date.isValid(sDate2)) {
+			var date1 = Date.parse(sDate1);
+			var date2 = Date.parse(sDate2);
+			
+			if (((sComparator == COMPARATOR.EQUAL) &&  (date1 == date2)) || 
+			    ((sComparator == COMPARATOR.LESSER) &&  (date1 < date2)) ||
+			    ((sComparator == COMPARATOR.GREATER) &&  (date1 > date2))) {
+				bResult = true;
+			}
+		}
+	}
+	return bResult;
+};
+
+
+Date.isEqualTo = function (sDate1, sDate2) {
+    return Date.compareDates(sDate1, sDate2, COMPARATOR.EQUAL);
+};
+Date.isGreaterThan = function (sDate, sComparisonDate) {
+    return Date.compareDates(sDate, sComparisonDate, COMPARATOR.GREATER);
+};
+Date.isLessThan = function (sDate, sComparisonDate) {
+    return Date.compareDates(sDate, sComparisonDate, COMPARATOR.LESSER);
+};
+
+Date.isValid = function (sDate) {
+    var sCurrVal = sDate;
+    var bValid = true;
+
+    if (String.isNullOrEmpty(sCurrVal)) {
+        bValid = false;
+    }
+    //Declare Regex  
+    var rxDatePattern = /^(\d{1,2})(\/|-)(\d{1,2})(\/|-)(\d{4})$/;
+    var dtArray = sCurrVal.match(rxDatePattern); // is format OK?
+
+    if (dtArray == null) {
+        bValid = false;
+    }
+    else {
+        //Checks for mm/dd/yyyy format.
+        dtMonth = dtArray[1];
+        dtDay = dtArray[3];
+        dtYear = dtArray[5];
+
+        if (dtMonth < 1 || dtMonth > 12) {
+            bValid = false;
+        }
+        else if (dtDay < 1 || dtDay > 31) {
+            bValid = false;
+        }
+        else if ((dtMonth == 4 || dtMonth == 6 || dtMonth == 9 || dtMonth == 11) && dtDay == 31) {
+            bValid = false;
+        }
+        else if (dtMonth == 2) {
+            var isleap = (dtYear % 4 == 0 && (dtYear % 100 != 0 || dtYear % 400 == 0));
+
+            if (dtDay > 29 || (dtDay == 29 && !isleap)) {
+                bValid = false;
+            }
+        }
+    }
+    return bValid;
+};
+
+/*=========================== Number class ===========================*/
+Number.isInt = function (sNum) {
+    var bResult = true;
+
+    if (sNum) {
+        var sValue = sNum.toString();
+        for (i = 0; i < sValue.length; i++) {
+            if ((sValue.charAt(i) != '0') &&
+                (sValue.charAt(i) != '1') &&
+                (sValue.charAt(i) != '2') &&
+                (sValue.charAt(i) != '3') &&
+                (sValue.charAt(i) != '4') &&
+                (sValue.charAt(i) != '5') &&
+                (sValue.charAt(i) != '6') &&
+                (sValue.charAt(i) != '7') &&
+                (sValue.charAt(i) != '8') &&
+                (sValue.charAt(i) != '9')) {
+                bResult = false;
+            }
+        }
+    }
+    else {
+        bResult = false;
+    }
+
+    return bResult;
+};
+
+/*=========================== String class ===========================*/
+/*
+* Purpose: This function will trim leading and trailing spaces from a string.
+*/
+String.prototype.trim = function () {
+    return this.replace(/^\s+|\s+$/g, "");
+};
+
+/*
+* Purpose: This function will take in a string value and return true/false based on if the string is null/empty or not.
+*/
+String.isNullOrEmpty = function (sValue) {
+	var bResult = true;
+	if (sValue || !(sValue === '')) {
+		bResult = false;
+	}
+	return bResult;
+};
+
+String.prototype.isValidLength = function(iLength) {
+	return this.length <= iLength;
+};
