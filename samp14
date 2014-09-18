@@ -1,0 +1,97 @@
+#region Control Events
+        public void BtnUpload_Click(object sender, EventArgs e)
+        {
+            if (log.IsDebugEnabled) log.Debug("AuditDataUpload - UploadButtonClick started");
+
+            //set cuurent audit  to null so that we get latest info from db
+            CurrentAudit = null;
+
+            //IServiceBuffer FileValidation = new ServiceBufferImpl();
+            IServiceBuffer svcBuf = new ServiceBufferImpl();
+            svcBuf.SetServiceInvocationFocusObject(CurrentUser.UserID);
+
+            AuditFileUploadTO Upload = new AuditFileUploadTO(Master.GetResourceManager());
+            Upload.RawFileData = HttpContext.Current.Request.Files[0];
+            Upload.CurrentAudit = CurrentAudit;
+            Upload.UploadDate = String.Format("{0:yyyy-MM-dd_hh-mm-ss-tt}", DateTime.Now);
+            Upload.UploadUser = (UserTO)AudSvcFacade.GetUserInfoDetails(svcBuf).GetServiceInvocationFocusObject();
+            Upload.FileLevel = Convert.ToInt32(ddlLevel.SelectedValue);
+            Upload.AuditFileType = Convert.ToInt32(hfFileType.Value);
+            Upload.Comments = txtCmnts.Text;
+            Upload.UserId = CurrentUser.UserID;
+            if (Upload.FileLevel == 0)
+            {
+                Upload.FileLevelLabel = "Audit";
+
+            }
+            else
+            {
+                Upload.FileLevelLabel = GetVersionLookupList().Single(x => x.Id.Equals(Upload.FileLevel)).Value;
+            }
+
+            Upload.FileTypeLabel = GetLookupList().Single(x => x.Id.Equals(Upload.AuditFileType)).Value;
+
+            svcBuf = AudSvcFacade.UploadFile(Upload);
+
+            if (!ErrorHandler.HasServiceErrors(svcBuf, true))
+            {
+                //Log Audit Event
+                AudAuditLogTO auditLog = new AudAuditLogTO();
+                auditLog.ID = Convert.ToInt32(CurrentAudit.Id);
+
+                switch (Upload.AuditFileType)
+                {
+                    case AudConstants.AUD_FILE_TYPE_FINAL_REPORT:
+                        auditLog.AuditEventCode = AudConstants.AUD_EVENT_UPLD_FINAL_REPORT;
+                        break;
+                    case AudConstants.AUD_FILE_TYPE_DRAFT_REPORT:
+                        auditLog.AuditEventCode = AudConstants.AUD_EVENT_UPLD_DRAFT_REPORT;
+                        break;
+                    case AudConstants.AUD_FILE_TYPE_DRAFT_RESPONSE:
+                        auditLog.AuditEventCode = AudConstants.AUD_EVENT_UPLD_DRAFT_RESPONSE;
+                        break;
+                    case AudConstants.AUD_FILE_TYPE_AUDIT_BRIEF:
+                        auditLog.AuditEventCode = AudConstants.AUD_EVENT_UPLD_AUDIT_BRIEF;
+                        break;
+                    case AudConstants.AUD_FILE_TYPE_CMS_EXCEL:
+                        auditLog.AuditEventCode = AudConstants.AUD_EVENT_UPLD_EXCEL_WORKSHEET;
+                        break;
+                    case AudConstants.AUD_FILE_TYPE_ORG_SAMPLE:
+                        auditLog.AuditEventCode = AudConstants.AUD_EVENT_UPLD_ORG_SAMPLE;
+                        break;
+                    //case AudConstants.AUD_FILE_TYPE_CLOSEOUT_LTR:
+                    //    auditLog.AuditEventCode = AudConstants.AUD_EVENT_UPLD_CLOSEOUT_LTR;
+                    //    break;
+                }
+
+                if (!String.IsNullOrEmpty(auditLog.AuditEventCode))
+                {
+                    AddAuditEvents(auditLog);
+                }
+
+                hfAuditStatus.Value = Convert.ToString(CurrentAudit.StatusId); //Need to update the hidden field with the most recent status ID
+                ErrorHandler.AddNote(Master.GetResourceManager().GetString("Success_FileUpload"));
+
+                ddlFileType.SelectedIndex = 0;
+                ddlLevel.SelectedIndex = 0;
+                txtCmnts.Text = String.Empty;
+            }
+            else
+            {
+                if (!String.IsNullOrEmpty(hfFileType.Value))
+                {
+                    if (ddlFileType.Items.Count <= 1)
+                    {
+                        SortedDictionary<string, int> ddlFileList = GetUploadFileTypes(Convert.ToInt32(ddlLevel.SelectedValue), CurrentAudit.StatusId, !CurrentUser.AccessTypeGroup.Equals(AudConstants.ENUM_ACCESSTYPE_GROUP.CMS_USER));
+                        ddlFileType.DataSource = ddlFileList;
+                        ddlFileType.DataTextField = "Key";
+                        ddlFileType.DataValueField = "Value";
+                        ddlFileType.DataBind();
+                        ddlFileType.SelectedValue = hfFileType.Value;
+
+                        ddlFileType.Enabled = true;
+                    }
+                }
+            }
+        }
+        #endregion
