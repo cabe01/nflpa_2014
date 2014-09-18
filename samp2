@@ -1,0 +1,72 @@
+Type.registerNamespace("HPMSWebApp");
+
+$HPMS.AuditDataUpload = function () {
+
+    $HPMS.AuditDataUpload.initializeBase(this);
+}
+$HPMS.AuditDataUpload.prototype = {
+    get_DDLFileType: function () {
+        return this._DDLFileType;
+    },
+    set_DDLFileType: function (value) {
+        if (this._DDLFileType !== value) {
+            this._DDLFileType = value;
+        }
+    },
+    get_DDLFileLevel: function () {
+        return this._DDLFileLevel;
+    },
+    set_DDLFileLevel: function (value) {
+        if (this._DDLFileLevel !== value) {
+            this._DDLFileLevel = value;
+        }
+    },
+
+    DisplayFileTypes: function (result, uerContext) {
+        uerContext.ClearOptions(uerContext._DDLFileType);
+        uerContext.AddToOptionList(uerContext._DDLFileType, '', 'Select a File Type...');
+        uerContext.AddAuditFileTypes(uerContext, uerContext._DDLFileType, result);
+        uerContext._DDLFileType["disabled"] = false;
+        //uerContext._DDLFileType.focus(); -- Removed per 508 team findings RMW 12/24
+    },
+    AddAuditFileTypes: function (uerContext, OptionList, arrList) {
+        // Always clear an option list from the last entry to the first
+        for (var c in arrList) {
+            if (arrList.hasOwnProperty(c) && arrList[c] != draftresponseConstant) {
+                this.AddToOptionList(OptionList, arrList[c], c);
+            }
+        }
+    },
+
+    _onAuditTypeChange: function (e) {
+        var iFileLevel = e.target[e.target.selectedIndex].value;
+        if (iFileLevel != "")
+            HPMS_AUD_WebApp.Services.AudAjaxWebService.GetUploadFileTypes(iFileLevel, document.getElementById(hfAuditStatus).value, blnIsPlanUser, this.DisplayFileTypes, null, this);
+        else {
+            this._DDLFileType.options[0].selected = true;
+            this._DDLFileType["disabled"] = "true";
+        }
+    },
+
+    initialize: function () {
+        $HPMS.AuditDataUpload.callBaseMethod(this, 'initialize');
+
+        // Add custom initialization here
+        //Registering event handlers
+        try {
+            if (this._DDLFileLevel != null)
+                this._onAuditLocationChange = this.addEventHandler(this._DDLFileLevel, "change", this._onAuditTypeChange);
+        }
+        catch (Error) {
+        }
+    },
+
+    dispose: function () {
+        //Add custom dispose actions here
+        //        if (this._DDLFileLevel != null)
+        //            this._onAuditLocationChange = this.addEventHandler(this._DDLFileLevel, "change", this._onAuditLocationChange);
+
+        $HPMS.AuditDataUpload.callBaseMethod(this, 'dispose');
+    }
+}
+$HPMS.AuditDataUpload.registerClass('HPMSWebApp.AuditDataUpload', HPMSWebApp.AJAXCommon);
