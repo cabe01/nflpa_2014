@@ -1,0 +1,370 @@
+$(document).ready(function () {
+
+    ErrorHandler = {
+        /*
+        * Purpose: This method will add an error string to the log.
+        *
+        * Params: sError - the error to be logged.
+        */
+        AddError: function (sError) {
+            this.AddItemToList(sError, this.GetErrorList());
+        },
+
+        /*
+        * Purpose: This method will add a string to the given list.
+        *
+        * Params: sValue - the value to be appended.
+        */
+        AddItemToList: function (sValue, objList) {
+            var Item = document.createElement('li');
+            var Anchor = document.createElement('a');
+
+            Anchor.innerHTML = sValue;
+            Anchor.tabindex = "0";
+
+            Item.appendChild(Anchor);
+            objList.appendChild(Item);
+        },
+
+        /*
+        * Purpose: This method will add a note string to the log.
+        *
+        * Params: sNote - the note to be logged.
+        */
+        AddNote: function (sNote) {
+            this.AddItemToList(sNote, this.GetNoteList());
+        },
+
+        /*
+        * Purpose: This method will return true or false depending on if sValue contains invalid characters or not.
+        *
+        * Params: sValue - the string value to be checked for validity.
+        *         sFieldName - the name of the field to be logged, in case of error.
+        *
+        * Returns: Returns whether or not sValue contains invalid characters.
+        */
+        CheckForRestricted: function (sValue, sFieldName) {
+            var bResult = false;
+
+            if (!String.isNullOrEmpty(sValue)) {
+                var bResult = this.HasRestrictedChars(sValue);
+                var patternString = err_Client_Restricted_Chars; //This is a var from the AUD RESX file
+
+                if (bResult) {
+                    var sError = String.format(err_Check_For_Restricted_Chars, sFieldName, patternString);
+                    this.AddError(sError);
+                }
+            }
+
+            return bResult;
+        },
+
+        /*
+        * Purpose: This method will clear the List of all it's items.
+        *
+        * Params: List - the list object to be cleared.
+        */
+        ClearList: function (List) {
+            $(List).empty();
+        },
+
+        /*
+        * Purpose: This method will clear all errors from the list.
+        */
+        ClearErrors: function () {
+            this.ClearList(this.GetErrorList());
+        },
+
+        /*
+        * Purpose: This method will clear all notes from the list.
+        */
+        ClearNotes: function () {
+            this.ClearList(this.GetNoteList());
+        },
+
+        /*
+        * Purpose: This method will clear all items from both lists.
+        */
+        ClearAllLists: function () {
+            this.ClearErrors();
+            this.ClearNotes();
+        },
+
+        /*
+        * Purpose: This method will clear the list header.
+        */
+        ClearHeader: function () {
+            this.GetHeader().innerHTML = "";
+        },
+
+        /*
+        * Purpose: This method will retrieve the number of errors currently being logged.
+        */
+        ErrorCount: function () {
+            return this.GetErrorList().getElementsByTagName('li').length;
+        },
+
+        /*
+        * Purpose: This method will return the list header object.
+        *
+        * Returns: Returns the header object.
+        */
+        GetHeader: function () {
+            var Header;
+
+            if (document.getElementById(AUDErrorHandlerListHeader)) {
+                Header = document.getElementById(AUDErrorHandlerListHeader);
+            }
+            else if (document.getElementById("AUDErrorHandlerClientHeader")) {
+                Header = document.getElementById("AUDErrorHandlerClientHeader"); //RMW - Rehash this part?
+            }
+            else {
+                Header = document.createElement('h2');
+                Header.style.display = "none";
+                Header.className = "errorHandler";
+                Header.id = "AUDErrorHandlerClientHeader";
+                $(this.GetErrorHandler()).prepend(Header);
+            }
+
+            return Header;
+        },
+
+        /*
+        * Purpose: This method will return the LinkToggle field object.
+        *
+        * Returns: Returns the LinkToggle object.
+        */
+        GetLinkToggle: function () {
+            return document.getElementById(AUDErrorHandlerLinkToggle);
+        },
+
+        /*
+        * Purpose: This method will create (if necessary) the error list object and return it.
+        *
+        * Returns: Returns the error list object.
+        */
+        GetErrorList: function () {
+            return document.getElementById(AUDErrorHandlerErrorList);
+        },
+
+        /*
+        * Purpose: This method will create (if necessary) the note list object and return it.
+        *
+        * Returns: Returns the note list object.
+        */
+        GetNoteList: function () {
+            return document.getElementById(AUDErrorHandlerNoteList);
+        },
+
+        /*
+        * Purpose: This method will return this ErrorHandler object.
+        *
+        * Returns: Returns the current ErrorHandler object.
+        */
+        GetErrorHandler: function () {
+            return document.getElementById(AUDErrorHandler);
+        },
+
+        /*
+        * Purpose: This method will create (if necessary) the note list object and return it.
+        *
+        * Params: List - The BulletedList object to be filled and displayed.
+        *         sHeader - The header of the generated list
+        */
+        GenerateList: function (List, sHeader) {
+            var ListHeader = this.GetHeader();
+            var ToggleLinks = this.GetLinkToggle();
+            var ListItems = List.getElementsByTagName("li");
+            var iListLength = ListItems.length;
+
+            if (iListLength > 0) {
+                if (ToggleLinks.value == "Y") {
+                    for (var i = 0; i < iListLength.length; i++) {
+                        var Item = ListItems[i];
+                        var Link = Item.getElementsByTagName('a')[0];
+
+                        Item.innerHTML = Link.innerHTML;
+                        Link.innerHTML = "";
+                    }
+                }
+
+                this.HeaderText(sHeader);
+
+                ListHeader.style.display = 'block';
+                List.style.display = 'block';
+
+                window.scrollTo(0, 0);
+
+                $(this).focus();
+            }
+        },
+
+        /*
+        * Purpose: This method will generate the list of notes with the default header.
+        */
+        GenerateNotes: function () {
+            this.GenerateList(this.GetNoteList(), cons_AUD_NOTE_LIST_HEADER);
+        },
+
+        /*
+        * Purpose: This method will return true or false depending on if sValue contains invalid characters or not.
+        *
+        * Params: sValue - the string value to be checked for validity.
+        *
+        * Returns: Returns whether or not sValue contains invalid characters.
+        */
+        HasRestrictedChars: function (sValue) {
+            var pattern = err_Client_Restricted_Char_Pattern; //This is a var from the AUD RESX file
+            var bResult = false;
+
+            if (!String.isNullOrEmpty(sValue) && pattern.test(sValue.trim())) {
+                bResult = true;
+            }
+            return bResult;
+        },
+
+        /*
+        * Purpose: This method will change the list header of the ErrorHandler object.
+        *
+        * Params: sHeader - the new text of the list header.
+        */
+        HeaderText: function (sHeader) {
+            var Header = this.GetHeader();
+            Header.innerHTML = sHeader;
+        },
+
+        /*
+        * Purpose: This method will hide both lists and their header.
+        */
+        HideAll: function () {
+            this.HideErrors();
+            this.HideNotes();
+            this.HideHeader();
+        },
+
+        /*
+        * Purpose: This method will take in an HTML control and hide it using display:none.
+        *
+        * Params: Control - the control to be hidden.
+        */
+        HideControl: function (Control) {
+            Control.style.display = 'none';
+        },
+
+        /*
+        * Purpose: This method will hide and clear the list of errors.
+        */
+        HideErrors: function () {
+            this.HideControl(this.GetErrorList());
+            this.ClearList(this.GetErrorList());
+        },
+
+        /*
+        * Purpose: This method will hide and clear the list header.
+        */
+        HideHeader: function () {
+            this.HideControl(this.GetHeader());
+            this.ClearHeader();
+        },
+
+        /*
+        * Purpose: This method will hide or show the links within each list.
+        *
+        * Params: sHide - the value to toggle the links to.
+        */
+        HideLinks: function (sHide) {
+            var ToggleLinks = this.GetLinkToggle();
+
+            if (typeof sHide == "boolean") {
+                if (sHide == true) {
+                    ToggleLinks.value = "Y";
+                }
+                else {
+                    ToggleLinks.value = "N";
+                }
+            }
+
+            else if (typeof sHide == "string") {
+                sHide = sHide.toUpperCase();
+
+                if (sHide == "Y" || sHide == "N") {
+                    ToggleLinks.value = sHide;
+                }
+            }
+
+        },
+
+        /*
+        * Purpose: This method will hide and clear the list of notes.
+        */
+        HideNotes: function () {
+            this.HideControl(this.GetNoteList());
+            this.ClearList(this.GetNoteList());
+        },
+
+        /*
+        * Purpose: This method will retrieve the number of notes currently being logged.
+        */
+        NoteCount: function () {
+            return this.GetNoteList().getElementsByTagName('li').length;
+        },
+
+        /*
+        * Purpose: This method will clear and hide all lists in the ErrorHandler object.
+        */
+        Reset: function () {
+            this.HideAll();
+            this.ClearAllLists();
+        },
+
+        /*
+        * Purpose: This method will empty all text input boxes and reset dropdowns to their default index on an entire page.
+        */
+        ResetPageControlsToDefault: function () {
+            var f = document.forms[0];
+
+            for (var i = 0; i < f.elements.length; i++) {
+                if (f.elements[i].type == "text") {
+                    f.elements[i].value = "";
+                }
+                else if (f.elements[i].type == "select-one") {
+                    f.elements[i].selectedIndex = 0;
+                }
+            }
+        },
+
+        /*
+        * Purpose: This method will generate the list of errors if any have been logged in the handler.
+        *
+        * Returns: Whether or not there are errors to be displayed (mainly for client postback events).
+        */
+        SuccessfulValidation: function () {
+            var bSuccess = true;
+
+            if (this.ErrorCount() > 0) {
+                this.GenerateList(this.GetErrorList(), cons_AUD_ERROR_LIST_HEADER);
+                bSuccess = false;
+            }
+
+            return bSuccess;
+        }
+    },
+
+    //Extend the usercontrol with these methods
+        $.extend($get(AUDErrorHandler), ErrorHandler);
+
+    /*
+    * This section of the ErrorHandler automatically focuses the server-side error list after postback. Because the items are stored in the session,
+    * the errors/notes will be focused and displayed on whatever page it comes to after the post.
+    */
+
+    var ErrorList = ErrorHandler.GetErrorList();
+    var NoteList = ErrorHandler.GetNoteList();
+
+    if ((ErrorList && ErrorList.style.display != "none") || (NoteList && NoteList.style.display != "none")) {
+        ErrorHandler.GetErrorHandler().focus();
+    } else {
+        //This is AUD-Specific; this piece of code would alternatively focus another control in the event a Note or Error list is not found.
+        $(".rtsSelected").focus();
+    }
+});
