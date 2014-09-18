@@ -1,0 +1,121 @@
+using System;
+using System.Linq;
+using Microsoft.Practices.EnterpriseLibrary.Validation;
+using Microsoft.Practices.EnterpriseLibrary.Validation.Validators;
+using System.Resources;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+
+namespace HPMS_AUD_SharedObjects.SharedObjects.domain.aud.transit
+{
+    [Serializable]
+    [HasSelfValidation]
+    public class EngagementLetterTO : BaseLetterGenerationTO
+    {
+        public virtual AuditTO CurrentAudit { get; set; }
+        public virtual string CEOName { get; set; }
+        public virtual string CEORelatedConID { get; set; }
+        public virtual bool ToBeApproved { get; set; }
+        public virtual string FileUploadPath { get; set; }
+        public virtual Dictionary<String, Dictionary<String, int>> UserTokens { get; set; }
+        public virtual TokenInputTO UserTokenValues { get; set; }
+
+        public EngagementLetterTO()
+        {
+        }
+
+        public EngagementLetterTO(ResourceManager resourceManager)
+            : base(resourceManager)
+        {
+        }
+
+        public EngagementLetterTO(ResourceManager resourceManager, AuditTO IncomingAudit)
+            : base(resourceManager)
+        {
+            CurrentAudit = IncomingAudit;
+        }
+
+        [SelfValidation]
+        public void IsValid(ValidationResults results)
+        {
+            //base.IsValid(results);
+
+            IDictionary<String, String> FieldsToBeValidated = new Dictionary<String, String>();
+            String strBlankField = ResourceMan.GetString("Blank_Field");
+
+            // validate CEO value for blank data and invalid characters
+            if (CEORelatedConID.Equals(String.Empty)) 
+            {
+                results.AddResult(new ValidationResult(String.Format("Sponsor CEO", strBlankField), this, null, null, null));
+            }
+            else
+            {
+                FieldsToBeValidated.Add("Sponsor CEO Name", Convert.ToString(CEOName));
+                FieldsToBeValidated.Add("Sponsor CEO Details", Convert.ToString(CEORelatedConID));
+            }
+            
+            // validate each User token value for blank data and invalid characters
+            foreach (KeyValuePair<string, string> kvp in UserTokenValues.TokenValuePairs)
+            {
+                if (kvp.Value.Equals(String.Empty))
+                {
+                    results.AddResult(new ValidationResult(String.Format(kvp.Key, strBlankField), this, null, null, null));
+                }
+                else
+                {
+                    FieldsToBeValidated.Add(kvp);
+                }
+            }
+
+            ValidateInvalidCharacters(results, FieldsToBeValidated);
+
+            // Check to see if the text contains a < or >
+            if (Regex.IsMatch(ModifiedLetterContentText, @"([<>])"))
+            {
+                results.AddResult(new ValidationResult(ResourceMan.GetString("err_Restricted_Text_052802080000"), this, null, null, null));
+            }
+
+            // First check to ensure that the correct number of tokens are present
+            results.AddAllResults(from kvp in ServerTokens
+                              let serverToken = AUDLetterGeneratorConstants.TOKEN_PREFIX + kvp.Key + AUDLetterGeneratorConstants.TOKEN_SUFFIX
+                              let TokenDetails = kvp.Value
+                                  from entry in TokenDetails
+                                 let actualTokenCount = CountTokenOccurrences(serverToken, ModifiedLetterContent)
+                                  let correctTokenCount = entry.Value
+                                  where ((!actualTokenCount.Equals(correctTokenCount)) && (entry.Key != "Y"))
+                                 select new ValidationResult(String.Format(ResourceMan.GetString("err_Token_Count_Mismatch"), serverToken, actualTokenCount, correctTokenCount), this, null, null, null));
+
+            if (ToBeApproved)
+            {
+                //User token check - same as the loop above, this is LINQ
+                results.AddAllResults(from kvp in UserTokens
+                                  let userToken = AUDLetterGeneratorConstants.TOKEN_INPUT_PREFIX + kvp.Key + AUDLetterGeneratorConstants.TOKEN_INPUT_SUFFIX
+                                  let TokenDetails = kvp.Value
+                                  from entry in TokenDetails
+                                  let actualTokenCount = CountTokenOccurrences(userToken, ModifiedLetterContent)
+                                  let correctTokenCount = entry.Value
+                                  where (!actualTokenCount.Equals(correctTokenCount)) && (entry.Key != "Y")
+                                      select new ValidationResult(String.Format(ResourceMan.GetString("err_Token_Count_Mismatch"), userToken, actualTokenCount, correctTokenCount), this, null, null, null));
+            }
+        }
+
+        /// <summary>
+        /// Method used to iterate through the letter and count the tokens
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="letter"></param>
+        /// <returns></returns>
+        private static int CountTokenOccurrences(string token, string letter)
+        {
+            int numTokens = 0;
+            int i = 0;
+
+            while ((i = letter.IndexOf(token, i)) != -1)
+            {
+                i += token.Length;
+                numTokens++;
+            }
+            return numTokens;
+        }
+    }
+}
