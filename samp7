@@ -1,0 +1,538 @@
+public IServiceBuffer GetAuditExtract()
+        {
+            IServiceBuffer OutputBuffer = new ServiceBufferImpl();
+            StringBuilder sSQL = new StringBuilder();
+
+            sSQL.AppendFormat("SELECT summary.id as \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_AUDIT_ID);
+            sSQL.AppendFormat("summary.parent_organization_name \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_PRNT_ORG_NAME);
+            sSQL.AppendFormat("TO_CHAR(summary.onsite_start_date, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_ONSITE_START);
+            sSQL.AppendFormat("TO_CHAR(summary.onsite_end_date, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_ONSITE_END);
+            sSQL.AppendFormat("TO_CHAR(summary.desk_review_start_date, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_DESK_REV_START);
+            sSQL.AppendFormat("TO_CHAR(summary.desk_review_end_date, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_DESK_REV_END);
+            sSQL.AppendFormat("TO_CHAR(summary.entrance_conference_date, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CONF_START);
+            sSQL.AppendFormat("TO_CHAR(summary.exit_conference_date, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CONF_END);
+            sSQL.AppendFormat("TO_CHAR(summary.prelim_exit_conference_date, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_PRELIM_CONF_END);
+            sSQL.AppendFormat("TO_CHAR(summary.audit_close_date, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_AUDIT_CLOSE);
+            sSQL.AppendFormat("summary.closed_by \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_AUDIT_CLOSED_BY);
+            sSQL.AppendFormat("summary.overview_comments \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CMS_COMMENTS);
+            sSQL.AppendFormat("summary.audit_type \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_AUDIT_TYPE);
+            sSQL.AppendFormat("summary.audit_reason \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_AUDIT_RSN);
+            sSQL.AppendFormat("summary.audit_location \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_AUDIT_LCN);
+            sSQL.AppendFormat("summary.related_audit \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_RELATED_ID);
+            sSQL.AppendFormat("summary.comments \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_SCHEDULE_COMMENTS);
+            sSQL.AppendFormat("summary.signatory_name \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_LTR_SIG_NAME);
+            sSQL.AppendFormat("summary.audit_status \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_AUDIT_STATUS);
+            sSQL.AppendFormat("con_info.acctman_name \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_ACCT_MANAGER);
+            sSQL.AppendFormat("con_info.audit_contracts \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_AUDIT_CONTRACTS);
+            sSQL.AppendFormat("aud_leads.aud_leads \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_AUDIT_LEAD);
+            sSQL.AppendFormat("con_man.con_man \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CON_MAN);
+            sSQL.AppendFormat("sponsor_ceo.ceo_name \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_SPONSOR_CEO);
+            sSQL.AppendFormat("del_can.reason \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_DEL_CNCL_RSN);
+            sSQL.AppendFormat("cpa_lead_team.pdp_partd_fa \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CPA_PD_PARTD_FA);
+            sSQL.AppendFormat("cpa_lead_team.partd_cda \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CPA_PARTD_CDA);
+            sSQL.AppendFormat("cpa_lead_team.partd_grievance \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CPA_PARTD_GRIEV);
+            sSQL.AppendFormat("cpa_lead_team.partc_oda \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CPA_PARTC_ODA);
+            sSQL.AppendFormat("cpa_lead_team.partc_grievance \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CPA_PARTC_GRIEV);
+            sSQL.AppendFormat("cpa_lead_team.ptc_ptd_agent_broker \"{0}\",  ", AudConstants.AUD_EXTRACT_COLNAME_CPA_PTC_PTD_AGENT_BROKER);
+            sSQL.AppendFormat("cpa_lead_team.ptc_ptd_enroll \"{0}\",  ", AudConstants.AUD_EXTRACT_COLNAME_CPA_PTC_PTD_ENROLL);
+            sSQL.AppendFormat("cpa_lead_team.partd_lep \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CPA_PTD_LEP);
+            sSQL.AppendFormat("cpa_lead_team.partc_compl \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CPA_PTC_COMPL);
+            sSQL.AppendFormat("cpa_lead_team.ptc_ptd_cpe \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CPA_PTC_PTD_CPE);
+            sSQL.AppendFormat("cpa_lead_team.oev \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CPA_OEV);
+            sSQL.AppendFormat("cpa_lead_team.snp_moc \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CPA_SNP_MOC);
+            sSQL.AppendFormat("cpa_lead_team.partc_odag \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CPA_PTC_ODAG);
+            sSQL.AppendFormat("cpa_lead_team.partd_cdag \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CPA_PTD_CDAG);
+            sSQL.AppendFormat("letter_tokens.num_people \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_NUM_PEOPLE);
+            sSQL.AppendFormat("letter_tokens.contact_due_date \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CONTACT_DUE_DATE);
+            sSQL.AppendFormat("letter_tokens.contact_due_time \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_CONTACT_DUE_TIME);
+            sSQL.AppendFormat("letter_tokens.eft_due_date \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_EFT_DUE_DATE);
+            sSQL.AppendFormat("letter_tokens.eft_due_time \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_EFT_DUE_TIME);
+            sSQL.AppendFormat("letter_tokens.conf_start_time \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_ENTR_CONF_TIME);
+            sSQL.AppendFormat("letter_tokens.conf_end_time \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_FNL_EXIT_CONF_TIME);
+            sSQL.AppendFormat("num_days \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_NUM_DAYS);
+            sSQL.AppendFormat("letter_tokens.conf_prelim_end_time \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_PRELIM_EXIT_TIME);
+            sSQL.AppendFormat("TO_CHAR(letter_dates.engagement_letter_sent, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_EL_SENT);
+            sSQL.AppendFormat("TO_CHAR(letter_dates.draft_report_sent, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_DR_SENT);
+            sSQL.AppendFormat("TO_CHAR(letter_dates.draft_response_actual, 'MM/DD/YYYY') \"{0}\", ",AudConstants.AUD_EXTRACT_COLNAME_DR_RECEIVED);
+            sSQL.AppendFormat("TO_CHAR(letter_dates.final_report_sent, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_FR_SENT);
+            sSQL.AppendFormat("TO_CHAR(letter_dates.engagement_received, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_EL_RECEIVED);
+            sSQL.AppendFormat("TO_CHAR(letter_dates.receipt_received, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_RECPT_RECEIVED);
+            sSQL.AppendFormat("TO_CHAR(letter_dates.resolution_received, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_RESLN_RECEIVED);
+            sSQL.AppendFormat("TO_CHAR(letter_dates.attestation_expected, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_ATTEST_EXPECTED);
+            sSQL.AppendFormat("TO_CHAR(letter_dates.draft_expected, 'MM/DD/YYYY') \"{0}\", ", AudConstants.AUD_EXTRACT_COLNAME_DR_EXPECTED);
+            sSQL.AppendFormat("TO_CHAR(letter_dates.resolution_expected, 'MM/DD/YYYY') \"{0}\" ", AudConstants.AUD_EXTRACT_COLNAME_RESLN_EXPECTED);
+            sSQL.AppendFormat(" FROM ( ");
+            sSQL.AppendFormat("(SELECT a.{0}, ", AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("porg.{0}, ",CommonParentOrganizationTable.COL_PARENT_ORGANIZATION_NAME);
+            sSQL.AppendFormat("a.{0}, ", AuditSummaryTable.COL_ONSITE_START_DATE);
+            sSQL.AppendFormat("a.{0}, ", AuditSummaryTable.COL_ONSITE_END_DATE);
+            sSQL.AppendFormat("a.{0}, ", AuditSummaryTable.COL_DESK_REVIEW_START_DATE);
+            sSQL.AppendFormat("a.{0}, ", AuditSummaryTable.COL_DESK_REVIEW_END_DATE);
+            sSQL.AppendFormat("a.{0}, ", AuditSummaryTable.COL_ENTRANCE_CONFERENCE_DATE);
+            sSQL.AppendFormat("a.{0}, ", AuditSummaryTable.COL_EXIT_CONFERENCE_DATE);
+            sSQL.AppendFormat("a.{0}, ", AuditSummaryTable.COL_PRELIM_EXIT_CONFERENCE_DATE);
+            sSQL.AppendFormat("a.{0}, ", AuditSummaryTable.COL_AUDIT_CLOSE_DATE);
+            sSQL.AppendFormat("a.{0}, ", AuditSummaryTable.COL_OVERVIEW_COMMENTS);
+            sSQL.AppendFormat("aud_type.{0} audit_type, ", LookupTable.COL_VALUE);
+            sSQL.AppendFormat("aud_rsn.{0} audit_reason, ", LookupTable.COL_VALUE);
+            sSQL.AppendFormat("aud_loc.{0} audit_location, ", LookupTable.COL_VALUE);
+            sSQL.AppendFormat("a.{0}, ", AuditSummaryTable.COL_RELATED_AUDIT);
+            sSQL.AppendFormat("a.{0}, ", AuditSummaryTable.COL_COMMENTS);
+            sSQL.AppendFormat("sig.{0} signatory_name, ", LetterSignatory.COL_NAME);
+            sSQL.AppendFormat("status.{0} audit_status, ", LookupTable.COL_VALUE);
+            sSQL.AppendFormat("closed_by.user_name closed_by ");
+            sSQL.AppendFormat(" FROM {0} a ", AuditSummaryTable.TABLE_NAME);
+            sSQL.AppendFormat("LEFT OUTER JOIN {0} status ", LookupTable.TABLE_NAME);
+            sSQL.AppendFormat("ON status.{0}           = a.{1} ", LookupTable.COL_ID, AuditSummaryTable.COL_STATUS_ID);
+            sSQL.AppendFormat("AND status.{0} = {1} ", LookupTable.COL_CATEGORY_ID, AudConstants.AUD_CAT_STATUS);
+            sSQL.AppendFormat("LEFT OUTER JOIN {0} aud_type ", LookupTable.TABLE_NAME);
+            sSQL.AppendFormat("ON aud_type.{0}           = a.{1} ", LookupTable.COL_ID, AuditSummaryTable.COL_TYPE_ID);
+            sSQL.AppendFormat("AND aud_type.{0} = {1} ", LookupTable.COL_CATEGORY_ID, AudConstants.AUD_CAT_TYPE);
+            sSQL.AppendFormat("LEFT OUTER JOIN {0} aud_rsn ", LookupTable.TABLE_NAME);
+            sSQL.AppendFormat("ON aud_rsn.{0}           = a.{1} ", LookupTable.COL_ID, AuditSummaryTable.COL_REASON_ID);
+            sSQL.AppendFormat("AND aud_rsn.{0} = {1} ", LookupTable.COL_CATEGORY_ID, AudConstants.AUD_CAT_REASON);
+            sSQL.AppendFormat("LEFT OUTER JOIN {0} aud_loc ", LookupTable.TABLE_NAME);
+            sSQL.AppendFormat("ON aud_loc.{0}           = a.{1} ", LookupTable.COL_ID, AuditSummaryTable.COL_LOCATION_ID);
+            sSQL.AppendFormat("AND aud_loc.{0} = {1} ", LookupTable.COL_CATEGORY_ID, AudConstants.AUD_CAT_LOCATION);
+            sSQL.AppendFormat("LEFT OUTER JOIN {0} sig ", LetterSignatory.TABLE_NAME);
+            sSQL.AppendFormat("ON sig.{0} = a.{1} ", LetterSignatory.COL_ID, AuditSummaryTable.COL_ENGAGEMENT_LETTER_SIG_ID);
+            sSQL.AppendFormat("LEFT OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT hist.{0}, ", HistAuditSummaryTable.COL_AUDIT_ID);
+            sSQL.AppendFormat("    ui.{0} ", CommonUserInfo.COL_FIRST_NAME);
+            sSQL.AppendFormat("    || ' ' ");
+            sSQL.AppendFormat("|| ui.{0} AS user_name ", CommonUserInfo.COL_LAST_NAME);
+            sSQL.AppendFormat(" FROM {0} hist ", HistAuditSummaryTable.TABLE_NAME);
+            sSQL.AppendFormat("LEFT JOIN {0} ui ", CommonUserInfo.TABLE_NAME);
+            sSQL.AppendFormat("ON ui.{0}                     = hist.{1} ", CommonUserInfo.COL_USER_ID, HistAuditSummaryTable.COL_HISTORY_USER_ID);
+            sSQL.AppendFormat("WHERE hist.{0}      = {1} ", HistAuditSummaryTable.COL_HISTORY_ACTION_ID, AudConstants.AUD_HIST_ACTION_CLOSED);
+            sSQL.AppendFormat("AND hist.{0} = (SELECT max({0}) FROM {1} h WHERE h.{2} = hist.{2}) ", HistAuditSummaryTable.COL_HISTORY_DATE, HistAuditSummaryTable.TABLE_NAME, HistAuditSummaryTable.COL_AUDIT_ID);
+            sSQL.AppendFormat(") closed_by ON closed_by.{0} = a.{1} ", HistAuditSummaryTable.COL_AUDIT_ID, AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("LEFT OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT {0}, ", CommonParentOrganizationTable.COL_PARENT_ORGANIZATION_ID);
+            sSQL.AppendFormat("{0} ", CommonParentOrganizationTable.COL_PARENT_ORGANIZATION_NAME);
+            sSQL.AppendFormat(" FROM common.{0} porg ", CommonParentOrganizationTable.TABLE_NAME);
+            sSQL.AppendFormat("WHERE {0} IS NULL ", CommonParentOrganizationTable.COL_RECORD_END_DATE);
+            sSQL.AppendFormat(") porg ");
+            sSQL.AppendFormat("ON porg.{0} = a.{1} ", CommonParentOrganizationTable.COL_PARENT_ORGANIZATION_ID, AuditSummaryTable.COL_PARENT_ORGANIZATION_ID);
+            sSQL.AppendFormat(") summary ");
+            sSQL.AppendFormat("LEFT OUTER JOIN ");
+            sSQL.AppendFormat("( ");
+            sSQL.AppendFormat("    SELECT DISTINCT CI.{0} || ' ' || {1} as ceo_name, C.{2} ", ContractManagementContactInformationTable.COL_FIRST_NAME, ContractManagementContactInformationTable.COL_LAST_NAME, AuditXCEO.COL_AUDIT_ID);
+            sSQL.AppendFormat("    FROM {0} CI ", ContractManagementContactInformationTable.TABLE_NAME);
+            sSQL.AppendFormat("    LEFT JOIN AUD.{0} C ", AuditXCEO.TABLE_NAME);
+            sSQL.AppendFormat("    ON C.{0}          = CI.{1} ", AuditXCEO.COL_CONTRACT_ID, ContractManagementContactInformationTable.COL_CONTRACT_ID);
+            sSQL.AppendFormat("    AND CI.{0}       = {1} ", ContractManagementContactInformationTable.COL_CONTACT_TYPE, AudConstants.AUD_CONTACT_TYPE_CEO);
+            sSQL.AppendFormat("    WHERE CI.{0} IS NULL ", ContractManagementContactInformationTable.COL_RECORD_END_DATE);
+            sSQL.AppendFormat("    AND CI.{0}  = ", ContractManagementContactInformationTable.COL_RECORD_START_DATE);
+            sSQL.AppendFormat("    (SELECT MAX({0} )", ContractManagementContactInformationTable.COL_RECORD_START_DATE);
+            sSQL.AppendFormat("    FROM {0} ", ContractManagementContactInformationTable.TABLE_NAME);
+            sSQL.AppendFormat("    WHERE {0} = C.{0} ", ContractManagementContactInformationTable.COL_CONTRACT_ID);
+            sSQL.AppendFormat("    AND {0}  = {1}) ", ContractManagementContactInformationTable.COL_CONTACT_TYPE, AudConstants.AUD_CONTACT_TYPE_CEO);
+            sSQL.AppendFormat("    ORDER BY c.{0} DESC ", AuditXCEO.COL_AUDIT_ID);
+            sSQL.AppendFormat("  ) sponsor_ceo ");
+            sSQL.AppendFormat("  ON sponsor_ceo.{0} = summary.{1} ", AuditXCEO.COL_AUDIT_ID, AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("LEFT OUTER JOIN ");
+            sSQL.AppendFormat("( SELECT DISTINCT cons.contracts audit_contracts, ");
+            sSQL.AppendFormat("acctman.{0}, ", AuditXContract.COL_AUDIT_ID);
+            sSQL.AppendFormat("acctman_name ");
+            sSQL.AppendFormat(" FROM  ");
+            sSQL.AppendFormat("(SELECT {0}, ", AuditXContract.COL_AUDIT_ID);
+            sSQL.AppendFormat("LISTAGG({0}, ',') WITHIN GROUP ( ", AuditXContract.COL_CONTRACT_ID);
+            sSQL.AppendFormat("ORDER BY {0}) AS contracts ", AuditXContract.COL_AUDIT_ID);
+            sSQL.AppendFormat(" FROM {0} ", AuditXContract.TABLE_NAME);
+            sSQL.AppendFormat("GROUP BY {0} ", AuditXContract.COL_AUDIT_ID);
+            sSQL.AppendFormat("ORDER BY {0} DESC ", AuditXContract.COL_AUDIT_ID);
+            sSQL.AppendFormat(") cons ");
+            sSQL.AppendFormat("INNER JOIN ");
+            sSQL.AppendFormat("(SELECT {0}, ", AuditXContract.COL_AUDIT_ID);
+            sSQL.AppendFormat("MIN(acctman_name) AS acctman_name ");
+            sSQL.AppendFormat(" FROM  ");
+            sSQL.AppendFormat("(SELECT b.{0}, ", AuditXContract.COL_AUDIT_ID);
+            sSQL.AppendFormat("a.first_name, ", CommonUserInfo.COL_FIRST_NAME);
+            sSQL.AppendFormat("a.last_name, ", CommonUserInfo.COL_LAST_NAME);
+            sSQL.AppendFormat("a.first_name ", CommonUserInfo.COL_FIRST_NAME);
+            sSQL.AppendFormat("|| ' ' ");
+            sSQL.AppendFormat("|| a.last_name AS acctman_name ", CommonUserInfo.COL_LAST_NAME);
+            sSQL.AppendFormat(" FROM {0} b ", AuditXContract.TABLE_NAME);
+            sSQL.AppendFormat("INNER JOIN {0} c ", CMContract_X_CMS_Contact.TABLE_NAME);
+            sSQL.AppendFormat("ON b.{0}       = c.{1} ", AuditXContract.COL_CONTRACT_ID, CMContract_X_CMS_Contact.COL_CONTRACT_ID);
+            sSQL.AppendFormat("AND C.{0}          = '{1}' ", CMContract_X_CMS_Contact.COL_ROLE_ID, AudConstants.AUD_ROLE_ID_ACCOUNT_MANAGER);
+            sSQL.AppendFormat("AND C.{0} IS NULL ", CMContract_X_CMS_Contact.COL_RECORD_END_DATE);
+            sSQL.AppendFormat("INNER JOIN {0} A ", CommonUserInfo.TABLE_NAME);
+            sSQL.AppendFormat("ON A.{0} = C.{1} ", CommonUserInfo.COL_USER_ID, CMContract_X_CMS_Contact.COL_USER_ID);
+            sSQL.AppendFormat("GROUP BY b.{0}, ", AuditXContract.COL_AUDIT_ID);
+            sSQL.AppendFormat("a.{0}, ", CommonUserInfo.COL_FIRST_NAME);
+            sSQL.AppendFormat("a.{0} ", CommonUserInfo.COL_LAST_NAME);
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat("GROUP BY {0} ", AuditXContract.COL_AUDIT_ID);
+            sSQL.AppendFormat(") acctman ON cons.{0} = acctman.{0} ", AuditXContract.COL_AUDIT_ID);
+            sSQL.AppendFormat("ORDER BY {0} DESC ", AuditXContract.COL_AUDIT_ID);
+            sSQL.AppendFormat(") con_info ON con_info.{0} = summary.{1} ", AuditXContract.COL_AUDIT_ID, AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("LEFT OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT a.{0}, ", HPMSTeamMember.COL_AUDIT_ID);
+            sSQL.AppendFormat("LISTAGG(b.first_name ", CommonUserInfo.COL_FIRST_NAME);
+            sSQL.AppendFormat("|| ' ' ");
+            sSQL.AppendFormat("|| b.last_name, ',') WITHIN GROUP ( ", CommonUserInfo.COL_LAST_NAME);
+            sSQL.AppendFormat("ORDER BY {0}) AS aud_leads ", HPMSTeamMember.COL_AUDIT_ID);
+            sSQL.AppendFormat(" FROM {0} a ", HPMSTeamMember.TABLE_NAME);
+            sSQL.AppendFormat("INNER JOIN {0} b ", CommonUserInfo.TABLE_NAME);
+            sSQL.AppendFormat("ON a.{0}  = b.{0} ", HPMSTeamMember.COL_USER_ID, CommonUserInfo.COL_USER_ID);
+            sSQL.AppendFormat("AND a.{0} = {1} ", HPMSTeamMember.COL_ROLE_ID, AudConstants.AUD_TEAM_AUDIT_LEAD);
+            sSQL.AppendFormat("GROUP BY a.{0} ", HPMSTeamMember.COL_AUDIT_ID);
+            sSQL.AppendFormat(") aud_leads ON aud_leads.{0} = summary.{1} ", HPMSTeamMember.COL_AUDIT_ID, AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("LEFT OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT {0}, ", ExternalTeamMember.COL_AUDIT_ID);
+            sSQL.AppendFormat("LISTAGG({0}, ',') WITHIN GROUP ( ", ExternalTeamMember.COL_MEMBER_NAME);
+            sSQL.AppendFormat("ORDER BY {0}) AS con_man ", ExternalTeamMember.COL_AUDIT_ID);
+            sSQL.AppendFormat(" FROM  ");
+            sSQL.AppendFormat("( SELECT DISTINCT {0}, ", ExternalTeamMember.COL_AUDIT_ID);
+            sSQL.AppendFormat("{0} ", ExternalTeamMember.COL_MEMBER_NAME);
+            sSQL.AppendFormat("FROM {0} ", ExternalTeamMember.TABLE_NAME);
+            sSQL.AppendFormat("WHERE {0} = {1} ", ExternalTeamMember.COL_ROLE_ID, AudConstants.AUD_TEAM_CONTRACTOR_MANAGER);
+            sSQL.AppendFormat(") a ");
+            sSQL.AppendFormat("GROUP BY {0} ", ExternalTeamMember.COL_AUDIT_ID);
+            sSQL.AppendFormat(") con_man ");
+            sSQL.AppendFormat("ON con_man.{0} = summary.{1} ", ExternalTeamMember.COL_AUDIT_ID, AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("LEFT OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT * ");
+            sSQL.AppendFormat(" FROM  ");
+            sSQL.AppendFormat("(SELECT a.{0}, ", AuditXCPA.COL_AUDIT_ID);
+            sSQL.AppendFormat("a.cpa, ");
+            sSQL.AppendFormat("'(L)' ");
+            sSQL.AppendFormat("|| a.user_name ");
+            sSQL.AppendFormat("|| ', ' ");
+            sSQL.AppendFormat("|| b.user_name AS user_name ");
+            sSQL.AppendFormat(" FROM  ");
+            sSQL.AppendFormat("(SELECT {0}, ", AuditXCPA.COL_AUDIT_ID);
+            sSQL.AppendFormat("cpa, ");
+            sSQL.AppendFormat("LISTAGG(user_name, ',') WITHIN GROUP ( ");
+            sSQL.AppendFormat("ORDER BY {0}) AS user_name ", AuditXCPA.COL_AUDIT_ID);
+            sSQL.AppendFormat(" FROM  ");
+            sSQL.AppendFormat("( SELECT DISTINCT tm.{0}, ", HPMSTeamMember.COL_AUDIT_ID);
+            sSQL.AppendFormat("V.{0} AS cpa, ", VersionedLookupTable.COL_VALUE);
+            sSQL.AppendFormat("tm.{0}, ", HPMSTeamMember.COL_USER_ID);
+            sSQL.AppendFormat("UI.{0}, ", CommonUserInfo.COL_FIRST_NAME);
+            sSQL.AppendFormat("UI.{0}, ", CommonUserInfo.COL_LAST_NAME);
+            sSQL.AppendFormat("UI.{0} ", CommonUserInfo.COL_FIRST_NAME);
+            sSQL.AppendFormat("||' ' ");
+            sSQL.AppendFormat("|| UI.{0} AS user_name ", CommonUserInfo.COL_LAST_NAME);
+            sSQL.AppendFormat(" FROM {0} v, ", VersionedLookupTable.TABLE_NAME);
+            sSQL.AppendFormat("{0} tm, ", HPMSTeamMember.TABLE_NAME);
+            sSQL.AppendFormat("{0} ui ", CommonUserInfo.TABLE_NAME);
+            sSQL.AppendFormat("WHERE v.{0} = {1} ", VersionedLookupTable.COL_VERSIONED_CATEGORY_ID, AudConstants.AUD_VERS_CAT_CPA);
+            sSQL.AppendFormat("AND v.{0}                      = tm.{1} ", VersionedLookupTable.COL_ID, HPMSTeamMember.COL_CPA_ID);
+            sSQL.AppendFormat("AND tm.{0}                = ui.{1} ", HPMSTeamMember.COL_USER_ID, CommonUserInfo.COL_USER_ID);
+            sSQL.AppendFormat("AND tm.{0}                = {1} ", HPMSTeamMember.COL_ROLE_ID, AudConstants.AUD_TEAM_CPA_LEAD);
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat("GROUP BY {0}, ", AuditXCPA.COL_AUDIT_ID);
+            sSQL.AppendFormat("cpa ");
+            sSQL.AppendFormat(")a, ");
+            sSQL.AppendFormat("(SELECT {0}, ", AuditXCPA.COL_AUDIT_ID);
+            sSQL.AppendFormat("cpa, ");
+            sSQL.AppendFormat("LISTAGG(user_name, ',') WITHIN GROUP ( ");
+            sSQL.AppendFormat("ORDER BY {0}) AS user_name ", AuditXCPA.COL_AUDIT_ID);
+            sSQL.AppendFormat(" FROM  ");
+            sSQL.AppendFormat("( SELECT DISTINCT tm.{0}, ", HPMSTeamMember.COL_AUDIT_ID);
+            sSQL.AppendFormat("V.{0} AS cpa, ", VersionedLookupTable.COL_VALUE);
+            sSQL.AppendFormat("tm.{0}, ", HPMSTeamMember.COL_USER_ID);
+            sSQL.AppendFormat("UI.FIRST_NAME, ", CommonUserInfo.COL_FIRST_NAME);
+            sSQL.AppendFormat("UI.LAST_NAME, ", CommonUserInfo.COL_LAST_NAME);
+            sSQL.AppendFormat("UI.FIRST_NAME ", CommonUserInfo.COL_FIRST_NAME);
+            sSQL.AppendFormat("||' ' ");
+            sSQL.AppendFormat("|| UI.LAST_NAME AS user_name ", CommonUserInfo.COL_LAST_NAME);
+            sSQL.AppendFormat(" FROM {0} v, ", VersionedLookupTable.TABLE_NAME);
+            sSQL.AppendFormat("{0} tm, ", HPMSTeamMember.TABLE_NAME);
+            sSQL.AppendFormat("{0} ui ", CommonUserInfo.TABLE_NAME);
+            sSQL.AppendFormat("WHERE v.{0} = {1} ", VersionedLookupTable.COL_VERSIONED_CATEGORY_ID, AudConstants.AUD_VERS_CAT_CPA);
+            sSQL.AppendFormat("AND v.{0}                     = tm.{1} ", VersionedLookupTable.COL_ID, HPMSTeamMember.COL_CPA_ID);
+            sSQL.AppendFormat("AND tm.{0}                = ui.{1} ", HPMSTeamMember.COL_USER_ID, CommonUserInfo.COL_USER_ID);
+            sSQL.AppendFormat("AND tm.{0}                = {1} ", HPMSTeamMember.COL_ROLE_ID, AudConstants.AUD_TEAM_CPA_MEMBER);
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat("GROUP BY {0}, ", AuditXCPA.COL_AUDIT_ID);
+            sSQL.AppendFormat("cpa ");
+            sSQL.AppendFormat(")b ");
+            sSQL.AppendFormat("WHERE a.{0}                    = b.{0} ", HPMSTeamMember.COL_AUDIT_ID);
+            sSQL.AppendFormat("AND a.cpa                           =b.cpa ");
+            sSQL.AppendFormat(") pivot ( MIN(user_name) FOR (cpa) IN ('Prescription Drug (Part D) Formulary Administration (FA)' AS pdp_partd_fa, 'Part D Coverage Determinations and Appeals' AS partd_cda, 'Part D Grievances' AS partd_grievance, 'Part C Organization Determinations and Appeals' AS partc_oda, 'Part C Grievances' AS partc_grievance, 'Part C and Part D Agent/Broker Oversight' AS ptc_ptd_agent_broker, 'Part C and Part D Enrollment/Disenrollment' AS ptc_ptd_enroll, 'Part D Late Enrollment Penalty (LEP)' AS partd_lep, 'Part C Access to Care (Complaints)' AS partc_compl, 'Part C and Part D Compliance Program Effectiveness (CPE)' AS ptc_ptd_cpe, 'Outbound Enrollment Verification (OEV)' AS oev, 'Special Needs Plans - Model of Care (SNP-MOC)' AS snp_moc, 'Part C Organization Determination Appeals and Grievances (ODAG)' AS partc_odag, 'Part D Coverage Determination Appeals and Grievances (CDAG)' AS partd_cdag ) ) ");
+            sSQL.AppendFormat(") cpa_lead_team ");
+            sSQL.AppendFormat("ON cpa_lead_team.{0} = summary.{1} ", HPMSTeamMember.COL_AUDIT_ID, AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("LEFT OUTER JOIN ");
+            sSQL.AppendFormat("( SELECT {0}, {1} FROM {2} ", DeleteCancelReferenceTable.COL_AUDIT_ID, DeleteCancelReferenceTable.COL_REASON, DeleteCancelReferenceTable.TABLE_NAME);
+            sSQL.AppendFormat(") del_can ");
+            sSQL.AppendFormat("ON del_can.{0} = summary.{1} ", DeleteCancelReferenceTable.COL_AUDIT_ID, AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("LEFT OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT COALESCE(num_people.audit_id, contact_due_date.audit_id, contact_due_time.audit_id, eft_due_date.audit_id, eft_due_time.audit_id, conf_start_time.audit_id, conf_end_time.audit_id, num_days.audit_id, conf_prelim_end_time.audit_id) AS audit_id, ");
+            sSQL.AppendFormat("num_people, ");
+            sSQL.AppendFormat("contact_due_date, ");
+            sSQL.AppendFormat("contact_due_time, ");
+            sSQL.AppendFormat("eft_due_date, ");
+            sSQL.AppendFormat("eft_due_time, ");
+            sSQL.AppendFormat("conf_start_time, ");
+            sSQL.AppendFormat("conf_end_time, ");
+            sSQL.AppendFormat("num_days, ");
+            sSQL.AppendFormat("conf_prelim_end_time ");
+            sSQL.AppendFormat(" FROM  ");
+            sSQL.AppendFormat("(SELECT audit_id, ");
+            sSQL.AppendFormat("num_people ");
+            sSQL.AppendFormat("FROM ");
+            sSQL.AppendFormat("( SELECT 'audit_id' AS audit_id, 'num_people' AS num_people FROM DUAL ");
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat(" UNION  ");
+            sSQL.AppendFormat("(SELECT TO_CHAR(audit_id) AS audit_id, ");
+            sSQL.AppendFormat("TO_CHAR({0}) as token_value ", LetterTokenValues.COL_TOKEN_VALUE);
+            sSQL.AppendFormat("FROM {0} ", LetterTokenValues.TABLE_NAME);
+            sSQL.AppendFormat("WHERE upper({0}) = 'NUM_PEOPLE' ", LetterTokenValues.COL_TOKEN_NAME);
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat(") num_people ");
+            sSQL.AppendFormat("FULL OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT audit_id, ");
+            sSQL.AppendFormat("contact_due_date ");
+            sSQL.AppendFormat("FROM ");
+            sSQL.AppendFormat("(SELECT 'audit_id'   AS audit_id, ");
+            sSQL.AppendFormat("'contact_due_date' AS contact_due_date ");
+            sSQL.AppendFormat("FROM DUAL ");
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat("UNION ");
+            sSQL.AppendFormat("(SELECT TO_CHAR(audit_id) AS audit_id, ");
+            sSQL.AppendFormat("TO_CHAR({0}) as token_value ", LetterTokenValues.COL_TOKEN_VALUE);
+            sSQL.AppendFormat("FROM {0} ", LetterTokenValues.TABLE_NAME);
+            sSQL.AppendFormat("WHERE upper({0}) = 'CONTACT_DUE_DATE' ", LetterTokenValues.COL_TOKEN_NAME);
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat(") contact_due_date ");
+            sSQL.AppendFormat("ON contact_due_date.audit_id = num_people.audit_id ");
+            sSQL.AppendFormat("FULL OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT audit_id, ");
+            sSQL.AppendFormat("contact_due_time ");
+            sSQL.AppendFormat("FROM ");
+            sSQL.AppendFormat("(SELECT 'audit_id'   AS audit_id, ");
+            sSQL.AppendFormat("'contact_due_time' AS contact_due_time ");
+            sSQL.AppendFormat("FROM DUAL ");
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat("UNION ");
+            sSQL.AppendFormat("(SELECT TO_CHAR(audit_id) AS audit_id, ");
+            sSQL.AppendFormat("TO_CHAR({0}) as token_value ", LetterTokenValues.COL_TOKEN_VALUE);
+            sSQL.AppendFormat("FROM {0} ", LetterTokenValues.TABLE_NAME);
+            sSQL.AppendFormat("WHERE upper({0}) = 'CONTACT_DUE_TIME' ", LetterTokenValues.COL_TOKEN_NAME);
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat(") contact_due_time ");
+            sSQL.AppendFormat("ON contact_due_time.audit_id = contact_due_date.audit_id ");
+            sSQL.AppendFormat("FULL OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT audit_id, ");
+            sSQL.AppendFormat("eft_due_date ");
+            sSQL.AppendFormat("FROM ");
+            sSQL.AppendFormat("( SELECT 'audit_id' AS audit_id, 'eft_due_date' AS eft_due_date FROM DUAL ");
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat("UNION ");
+            sSQL.AppendFormat("(SELECT TO_CHAR(audit_id) AS audit_id, ");
+            sSQL.AppendFormat("TO_CHAR({0}) as token_value ", LetterTokenValues.COL_TOKEN_VALUE);
+            sSQL.AppendFormat("FROM {0} ", LetterTokenValues.TABLE_NAME);
+            sSQL.AppendFormat("WHERE upper({0}) = 'EFT_DUE_DATE' ", LetterTokenValues.COL_TOKEN_NAME);
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat(") eft_due_date ");
+            sSQL.AppendFormat("ON eft_due_date.audit_id = contact_due_time.audit_id ");
+            sSQL.AppendFormat("FULL OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT audit_id, ");
+            sSQL.AppendFormat("eft_due_time ");
+            sSQL.AppendFormat("FROM ");
+            sSQL.AppendFormat("( SELECT 'audit_id' AS audit_id, 'eft_due_time' AS eft_due_time FROM DUAL ");
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat("UNION ");
+            sSQL.AppendFormat("(SELECT TO_CHAR(audit_id) AS audit_id, ");
+            sSQL.AppendFormat("TO_CHAR({0}) as token_value ", LetterTokenValues.COL_TOKEN_VALUE);
+            sSQL.AppendFormat("FROM {0} ", LetterTokenValues.TABLE_NAME);
+            sSQL.AppendFormat("WHERE upper({0}) = 'EFT_DUE_TIME' ", LetterTokenValues.COL_TOKEN_NAME);
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat(") eft_due_time ");
+            sSQL.AppendFormat("ON eft_due_time.audit_id = eft_due_date.audit_id ");
+            sSQL.AppendFormat("FULL OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT audit_id, ");
+            sSQL.AppendFormat("conf_start_time ");
+            sSQL.AppendFormat("FROM ");
+            sSQL.AppendFormat("(SELECT 'audit_id'  AS audit_id, ");
+            sSQL.AppendFormat("'conf_start_time' AS conf_start_time ");
+            sSQL.AppendFormat("FROM DUAL ");
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat("UNION ");
+            sSQL.AppendFormat("(SELECT TO_CHAR(audit_id) AS audit_id, ");
+            sSQL.AppendFormat("TO_CHAR({0}) as token_value ", LetterTokenValues.COL_TOKEN_VALUE);
+            sSQL.AppendFormat("FROM {0} ", LetterTokenValues.TABLE_NAME);
+            sSQL.AppendFormat("WHERE upper({0}) = 'CONF_START_TIME' ", LetterTokenValues.COL_TOKEN_NAME);
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat(") conf_start_time ");
+            sSQL.AppendFormat("ON conf_start_time.audit_id = eft_due_time.audit_id ");
+            sSQL.AppendFormat("FULL OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT audit_id, ");
+            sSQL.AppendFormat("conf_end_time ");
+            sSQL.AppendFormat("FROM ");
+            sSQL.AppendFormat("( SELECT 'audit_id' AS audit_id, 'conf_end_time' AS conf_end_time FROM DUAL ");
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat("UNION ");
+            sSQL.AppendFormat("(SELECT TO_CHAR(audit_id) AS audit_id, ");
+            sSQL.AppendFormat("TO_CHAR({0}) as token_value ", LetterTokenValues.COL_TOKEN_VALUE);
+            sSQL.AppendFormat("FROM {0} ", LetterTokenValues.TABLE_NAME);
+            sSQL.AppendFormat("WHERE upper({0}) = 'CONF_END_TIME' ", LetterTokenValues.COL_TOKEN_NAME);
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat(") conf_end_time ");
+            sSQL.AppendFormat("ON conf_end_time.audit_id = conf_start_time.audit_id ");
+            sSQL.AppendFormat("FULL OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT audit_id, ");
+            sSQL.AppendFormat("num_days ");
+            sSQL.AppendFormat("FROM ");
+            sSQL.AppendFormat("( SELECT 'audit_id' AS audit_id, 'num_days' AS num_days FROM DUAL ");
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat("UNION ");
+            sSQL.AppendFormat("(SELECT TO_CHAR(audit_id) AS audit_id, ");
+            sSQL.AppendFormat("TO_CHAR({0}) as token_value ", LetterTokenValues.COL_TOKEN_VALUE);
+            sSQL.AppendFormat("FROM {0} ", LetterTokenValues.TABLE_NAME);
+            sSQL.AppendFormat("WHERE upper({0}) = 'NUM_DAYS' ", LetterTokenValues.COL_TOKEN_NAME);
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat(") num_days ");
+            sSQL.AppendFormat("ON num_days.audit_id = conf_end_time.audit_id ");
+            sSQL.AppendFormat("FULL OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT audit_id, ");
+            sSQL.AppendFormat("conf_prelim_end_time ");
+            sSQL.AppendFormat("FROM ");
+            sSQL.AppendFormat("(SELECT 'audit_id'       AS audit_id, ");
+            sSQL.AppendFormat("'conf_prelim_end_time' AS conf_prelim_end_time ");
+            sSQL.AppendFormat("FROM DUAL ");
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat("UNION ");
+            sSQL.AppendFormat("(SELECT TO_CHAR(audit_id) AS audit_id, ");
+            sSQL.AppendFormat("TO_CHAR({0}) as token_value ", LetterTokenValues.COL_TOKEN_VALUE);
+            sSQL.AppendFormat("FROM {0} ", LetterTokenValues.TABLE_NAME);
+            sSQL.AppendFormat("WHERE upper({0}) = 'CONF_PRELIM_END_TIME' ", LetterTokenValues.COL_TOKEN_NAME);
+            sSQL.AppendFormat(") ");
+            sSQL.AppendFormat(") conf_prelim_end_time ");
+            sSQL.AppendFormat("ON conf_prelim_end_time.audit_id          = num_days.audit_id ");
+            sSQL.AppendFormat(") letter_tokens ON letter_tokens.{0} = TO_CHAR(summary.{1}) ", LetterTokenValues.COL_AUDIT_ID, AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("LEFT OUTER JOIN ");
+            sSQL.AppendFormat("(SELECT a.{0}, ", AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("c.MAX_DATE      AS ENGAGEMENT_LETTER_SENT, ");
+            sSQL.AppendFormat("d.MAX_DATE      AS DRAFT_REPORT_SENT, ");
+            sSQL.AppendFormat("e.MAX_DATE      AS DRAFT_RESPONSE_ACTUAL, ");
+            sSQL.AppendFormat("f.MAX_DATE      AS FINAL_REPORT_SENT, ");
+            sSQL.AppendFormat("b.{0} AS ENGAGEMENT_RECEIVED, ", AuditAttestationsTable.COL_DATE_ATTESTED);
+            sSQL.AppendFormat("g.{0} AS RECEIPT_RECEIVED, ", AuditAttestationsTable.COL_DATE_ATTESTED);
+            sSQL.AppendFormat("h.{0} AS RESOLUTION_RECEIVED, ", AuditAttestationsTable.COL_DATE_ATTESTED);
+            sSQL.AppendFormat("CASE ");
+            sSQL.AppendFormat("WHEN BUSINESS_DAYS(c.MAX_DATE,c.MAX_DATE+2)=2 ");
+            sSQL.AppendFormat("THEN c.MAX_DATE                         +2 ");
+            sSQL.AppendFormat("WHEN BUSINESS_DAYS(c.MAX_DATE,c.MAX_DATE+3)=2 ");
+            sSQL.AppendFormat("THEN c.MAX_DATE                         +3 ");
+            sSQL.AppendFormat("WHEN BUSINESS_DAYS(c.MAX_DATE,c.MAX_DATE+4)=2 ");
+            sSQL.AppendFormat("THEN c.MAX_DATE                         +4 ");
+            sSQL.AppendFormat("WHEN BUSINESS_DAYS(c.MAX_DATE,c.MAX_DATE+5)=2 ");
+            sSQL.AppendFormat("THEN c.MAX_DATE                         +5 ");
+            sSQL.AppendFormat("WHEN BUSINESS_DAYS(c.MAX_DATE,c.MAX_DATE+6)=2 ");
+            sSQL.AppendFormat("THEN c.MAX_DATE                         +6 ");
+            sSQL.AppendFormat("WHEN BUSINESS_DAYS(c.MAX_DATE,c.MAX_DATE+7)=2 ");
+            sSQL.AppendFormat("THEN c.MAX_DATE                         +7 ");
+            sSQL.AppendFormat("END AS ATTESTATION_EXPECTED, ");
+            sSQL.AppendFormat("CASE ");
+            sSQL.AppendFormat("WHEN BUSINESS_DAYS(d.MAX_DATE,d.MAX_DATE+5)=5 ");
+            sSQL.AppendFormat("THEN d.MAX_DATE                         +5 ");
+            sSQL.AppendFormat("WHEN BUSINESS_DAYS(d.MAX_DATE,d.MAX_DATE+6)=5 ");
+            sSQL.AppendFormat("THEN d.MAX_DATE                         +6 ");
+            sSQL.AppendFormat("WHEN BUSINESS_DAYS(d.MAX_DATE,d.MAX_DATE+7)=5 ");
+            sSQL.AppendFormat("THEN d.MAX_DATE                         +7 ");
+            sSQL.AppendFormat("WHEN BUSINESS_DAYS(d.MAX_DATE,d.MAX_DATE+8)=5 ");
+            sSQL.AppendFormat("THEN d.MAX_DATE                         +8 ");
+            sSQL.AppendFormat("WHEN BUSINESS_DAYS(d.MAX_DATE,d.MAX_DATE+9)=5 ");
+            sSQL.AppendFormat("THEN d.MAX_DATE                         +9 ");
+            sSQL.AppendFormat("WHEN BUSINESS_DAYS(d.MAX_DATE,d.MAX_DATE+10)=5 ");
+            sSQL.AppendFormat("THEN d.MAX_DATE                         +10 ");
+            sSQL.AppendFormat("END           AS DRAFT_EXPECTED, ");
+            sSQL.AppendFormat("f.MAX_DATE+90 AS RESOLUTION_EXPECTED ");
+            sSQL.AppendFormat("FROM AUD.{0} a ", AuditSummaryTable.TABLE_NAME);
+            sSQL.AppendFormat("LEFT JOIN AUD.{0} b ", AuditAttestationsTable.TABLE_NAME);
+            sSQL.AppendFormat("ON a.{0}              = b.{1} ", AuditSummaryTable.COL_ID, AuditAttestationsTable.COL_AUDIT_ID);
+            sSQL.AppendFormat("AND b.{0} = {1} ", AuditAttestationsTable.COL_ATTESTATION_ID, AudConstants.AUD_ATTEST_ENGAGEMENTLETTER_UNIVERSEFILE);
+            sSQL.AppendFormat("LEFT JOIN AUD.{0} g ON a.{1} = g.{2} ", AuditAttestationsTable.TABLE_NAME, AuditSummaryTable.COL_ID, AuditAttestationsTable.COL_AUDIT_ID);
+            sSQL.AppendFormat("AND g.{0} = {1} ", AuditAttestationsTable.COL_ATTESTATION_ID, AudConstants.AUD_ATTEST_FINALREPORT);
+            sSQL.AppendFormat("LEFT JOIN AUD.{0} h ON a.{1} = h.{2} ", AuditAttestationsTable.TABLE_NAME, AuditSummaryTable.COL_ID, AuditAttestationsTable.COL_AUDIT_ID);
+            sSQL.AppendFormat("AND h.{0} = {1} ", AuditAttestationsTable.COL_ATTESTATION_ID, AudConstants.AUD_ATTEST_SUBMISSION_OF_CORRECTIVE_ACTION_SUMMARY);
+            sSQL.AppendFormat("LEFT JOIN (SELECT h_a_s.{0}, MAX(h_a_s.{1}) as MAX_DATE FROM {2} h_a_s ",
+                                HistAuditSummaryTable.COL_AUDIT_ID,
+                                HistAuditSummaryTable.COL_HISTORY_DATE,
+                                HistAuditSummaryTable.TABLE_NAME);
+            sSQL.AppendFormat("INNER JOIN {0} a_s ON a_s.{1} = h_a_s.{2} AND a_s.status_id in ({3}) ",
+                                AuditSummaryTable.TABLE_NAME,
+                                AuditSummaryTable.COL_ID,
+                                HistAuditSummaryTable.COL_AUDIT_ID,
+                                String.Join(",", AudConstants.POST_PENDING_ENGAGEMENT_LETTER_APPROVAL_STATES.Select(x => x.ToString()).ToArray()));
+            sSQL.AppendFormat("WHERE h_a_s.{0} = {1} GROUP BY h_a_s.{2}) c ON a.{3} = c.{2} ",
+                                HistAuditSummaryTable.COL_STATUS_ID,
+                                AudConstants.AUD_STATUS_PENDING_DRAFT_REPORT_UPLOAD,
+                                HistAuditSummaryTable.COL_AUDIT_ID,
+                                AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("LEFT JOIN (SELECT h_a_s.{0}, MAX(h_a_s.{1}) as MAX_DATE FROM {2} h_a_s ",
+                                HistAuditSummaryTable.COL_AUDIT_ID,
+                                HistAuditSummaryTable.COL_HISTORY_DATE,
+                                HistAuditSummaryTable.TABLE_NAME);
+            sSQL.AppendFormat("INNER JOIN {0} a_s ON a_s.{1} = h_a_s.{2} AND a_s.{3} in ({4}) ",
+                                AuditSummaryTable.TABLE_NAME,
+                                AuditSummaryTable.COL_ID,
+                                HistAuditSummaryTable.COL_AUDIT_ID,
+                                AuditSummaryTable.COL_STATUS_ID,
+                                String.Join(",", AudConstants.POST_PENDING_DRAFT_REPORT_APPROVAL_STATES.Select(x => x.ToString()).ToArray()));
+            sSQL.AppendFormat("WHERE h_a_s.{0} = {1} GROUP BY h_a_s.{2}) d ON a.{3} = d.{2} ",
+                                HistAuditSummaryTable.COL_STATUS_ID,
+                                AudConstants.AUD_STATUS_PENDING_DRAFT_REPORT_RESPONSE_UPLOAD,
+                                HistAuditSummaryTable.COL_AUDIT_ID,
+                                AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("LEFT JOIN (SELECT h_a_s.{0}, MAX(h_a_s.{1}) as MAX_DATE FROM {2} h_a_s ",
+                                HistAuditSummaryTable.COL_AUDIT_ID,
+                                HistAuditSummaryTable.COL_HISTORY_DATE,
+                                HistAuditSummaryTable.TABLE_NAME);
+            sSQL.AppendFormat("INNER JOIN {0} a_s ON a_s.{1} = h_a_s.{2} AND a_s.{3} in ({4}) ",
+                                AuditSummaryTable.TABLE_NAME,
+                                AuditSummaryTable.COL_ID,
+                                HistAuditSummaryTable.COL_AUDIT_ID,
+                                AuditSummaryTable.COL_STATUS_ID,
+                                String.Join(",", AudConstants.POST_PENDING_DRAFT_RESPONSE_STATES.Select(x => x.ToString()).ToArray()));
+            sSQL.AppendFormat("WHERE h_a_s.{0} = {1} GROUP BY h_a_s.{2}) e ON a.{3} = e.{2} ",
+                                HistAuditSummaryTable.COL_STATUS_ID,
+                                AudConstants.AUD_STATUS_PENDING_FINAL_REPORT_UPLOAD,
+                                HistAuditSummaryTable.COL_AUDIT_ID,
+                                AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("LEFT JOIN (SELECT h_a_s.{0}, MAX(h_a_s.{1}) as MAX_DATE FROM {2} h_a_s ",
+                                HistAuditSummaryTable.COL_AUDIT_ID,
+                                HistAuditSummaryTable.COL_HISTORY_DATE,
+                                HistAuditSummaryTable.TABLE_NAME);
+            sSQL.AppendFormat("INNER JOIN {0} a_s ON a_s.{1} = h_a_s.{2} AND a_s.{3} in ({4}) ",
+                                AuditSummaryTable.TABLE_NAME,
+                                AuditSummaryTable.COL_ID,
+                                HistAuditSummaryTable.COL_AUDIT_ID,
+                                AuditSummaryTable.COL_STATUS_ID,
+                                String.Join(",", AudConstants.POST_PENDING_FINAL_REPORT_APPROVAL.Select(x => x.ToString()).ToArray()));
+            sSQL.AppendFormat("WHERE h_a_s.{0} = {1} GROUP BY h_a_s.{2}) f ON a.{3} = f.{2} ",
+                                HistAuditSummaryTable.COL_STATUS_ID,
+                                AudConstants.AUD_STATUS_PENDING_FINAL_ATTESTATION,
+                                HistAuditSummaryTable.COL_AUDIT_ID,
+                                AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat(") letter_dates ON letter_dates.{0} = summary.{0} ) ", AuditSummaryTable.COL_ID);
+            sSQL.AppendFormat("ORDER BY summary.{0} DESC ", AuditSummaryTable.COL_ID);
+            
+            DataSet ds = null;
+            
+            try
+            {
+                using (ODPNetDataAccessBlock odpNetDataAccessBlock = GetHPMSDataAccessBlock())
+                {
+                    ds = odpNetDataAccessBlock.ExecuteSQLAsDataSet(sSQL.ToString());
+                }
+            }
+            catch (Exception e)
+            {
+                if (log.IsErrorEnabled)
+                {
+                    log.Error(string.Format("Exception in GetAuditExtract: {0}", e.Message));
+                    
+                }
+                throw;
+            }
+
+            OutputBuffer.SetServiceInvocationFocusObject(ds);
+
+            return OutputBuffer;
+        }
