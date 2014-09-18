@@ -1,0 +1,120 @@
+[WebMethod]
+        public SortedDictionary<string, int> GetUploadFileTypes(int iFileLevel, int iStatusID, bool blnIsPlanUser)
+        {
+            BuildUp();
+            SortedDictionary<string, int> sdFileTypes = new SortedDictionary<string, int>();
+            IList<LookupTO> allTypes = GetLookupValues(AudConstants.AUD_CAT_FILE_UPLOAD_TYPE)
+                                        .Where(f => !f.Id.Equals(AudConstants.AUD_FILE_TYPE_DRAFT_REPORT) && 
+                                                    !f.Id.Equals(AudConstants.AUD_FILE_TYPE_FINAL_REPORT))
+                                        .ToList();
+
+            foreach (LookupTO FileType in allTypes)
+            {
+                if (AudSvcFacade.IsFileTypeAllowedBasedOnStatus(FileType.Id, iFileLevel, iStatusID, blnIsPlanUser))
+                {
+                    sdFileTypes.Add(FileType.Value, FileType.Id);
+                }
+            }
+
+            return sdFileTypes;
+        }
+        
+         public void GenerateAuditExtractCSV()
+        {
+            DataSet dsExtract = (DataSet)GetAuditExtract().GetServiceInvocationFocusObject();
+            ExportCSVHelper objCSVHelper = new ExportCSVHelper();
+
+            for (int i = 0; i < dsExtract.Tables[0].Rows.Count; i++)
+            {
+                objCSVHelper.AddRow();
+
+                for (int k = 0; k < dsExtract.Tables[0].Columns.Count; k++)
+                {
+                    DataColumn c = dsExtract.Tables[0].Columns[k];
+
+                    objCSVHelper[c.ColumnName.ToString()] = dsExtract.Tables[0].Rows[i][k].ToString();
+                }
+            }
+
+            objCSVHelper.ExportToFile(AudConstants.AUD_EXTRACT_FILE_NAME);
+        }
+        
+        #region Lookup Table methods
+
+        private int CurrentCPAVersion
+        {
+            get
+            {
+                if (Application["AuditLookupTable"] == null)
+                {
+                    Application["AuditLookupTable"] = (IList<LookupTO>)AudSvcFacade.GetAllLookUpValue().GetServiceInvocationFocusObject();
+                }
+
+                return Convert.ToInt32(((IList<LookupTO>)Application["AuditLookupTable"]).Single(x => x.CategoryID.Equals(AudConstants.AUD_CAT_CPA_VERSION)).Value);
+            }
+        }
+
+        private IList<LookupTO> AuditLookup
+        {
+            get
+            {
+                if (Application["AuditLookupTable"] == null)
+                {
+                    Application["AuditLookupTable"] = (IList<LookupTO>)AudSvcFacade.GetAllLookUpValue().GetServiceInvocationFocusObject();
+                }
+                return (IList<LookupTO>)Application["AuditLookupTable"];
+            }
+            set
+            {
+                Application["AuditLookupTable"] = value;
+            }
+        }
+
+        private IList<VersionedLookupTO> AuditVersionLookup
+        {
+            get
+            {
+                //if (Application["AuditVersionLookupTable"] == null)
+                //{
+                    Application["AuditVersionLookupTable"] = (IList<VersionedLookupTO>)AudSvcFacade.GetAllVersionedLookUpValue().GetServiceInvocationFocusObject();
+                //}
+                return (IList<VersionedLookupTO>)Application["AuditVersionLookupTable"];
+            }
+            set
+            {
+                Application["AuditVersionLookupTable"] = value;
+            }
+        }
+
+
+        public IList<VersionedLookupTO> GetCPAListByVersion(AuditTO audit)
+        {
+            return (IList<VersionedLookupTO>)AuditVersionLookup
+                .Where(x => x.VersionedCategoryID.Equals(AudConstants.AUD_VERS_CAT_CPA) 
+                    && x.Version.Equals(CurrentCPAVersion)
+                    && (x.IsActive || (audit != null && audit.CPAId.Contains(x.Id.ToString()))))
+                .OrderBy(x => x.SortOrder).ToList();
+        }
+        public int GetCurrentCPAVersion()
+        {
+            return CurrentCPAVersion;
+        }
+        public IList<LookupTO> GetLookupList()
+        {
+            return (IList<LookupTO>)AuditLookup;
+        }
+        public IList<VersionedLookupTO> GetVersionLookupList()
+        {
+            return (IList<VersionedLookupTO>)AuditVersionLookup;
+        }
+        public IList<VersionedLookupTO> GetVersionLookupList(int iCatID)
+        {
+            return (IList<VersionedLookupTO>)AuditVersionLookup.Where(x => x.VersionedCategoryID.Equals(iCatID) && !x.Id.Equals(0)).OrderBy(x => x.SortOrder).ToList();
+        }
+        public IList<LookupTO> GetLookupList(int iCatID)
+        {
+            return (IList<LookupTO>)AuditLookup.Where(x => x.CategoryID.Equals(iCatID) && x.ActiveFlag.Equals("1")).OrderBy(x => x.SortOrder).ToList();
+        }
+
+        #endregion
+        
